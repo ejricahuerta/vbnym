@@ -1,5 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
-import type { User } from "@supabase/supabase-js";
+import type { AuthUser } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 import { isAuthorizedAdmin } from "./lib/auth";
 
@@ -32,7 +32,7 @@ export async function middleware(request: NextRequest) {
 
   // `SupabaseAuthClient` typings omit `getUser` in some Edge/TS combinations; runtime API is correct.
   const auth = supabase.auth as unknown as {
-    getUser: () => Promise<{ data: { user: User | null } }>;
+    getUser: () => Promise<{ data: { user: AuthUser | null } }>;
   };
   const {
     data: { user },
