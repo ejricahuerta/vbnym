@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import type { AuthUser } from "@supabase/supabase-js";
-import { NextResponse, type NextRequest } from "next/server";
+import type { NextRequest } from "next/dist/server/web/spec-extension/request";
+import { NextResponse } from "next/dist/server/web/spec-extension/response";
 import { isAuthorizedAdmin } from "./lib/auth";
 
 export async function middleware(request: NextRequest) {
