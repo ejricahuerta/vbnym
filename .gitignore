@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+
+# Environment and local secrets
+.env
+.env.*
+!.env.example
+keys.json
+
+# Logs and debug
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Next.js (also covered by web/.gitignore)
+.next/
+out/
+build/
+
+# Cloudflare Workers / Wrangler
+.wrangler/
+.mf/
+
+# Tests and tooling
+coverage/
+*.tsbuildinfo
+
+# Supabase CLI local state
+supabase/.branches/
+supabase/.temp/
+
+# Deploy
+.vercel/
+
+# Certificates
+*.pem

@@ -1,0 +1,10 @@
+name = "vbnym-payment-sync-cron"
+main = "src/index.ts"
+compatibility_date = "2026-04-13"
+
+[triggers]
+crons = ["* * * * *", "0 12 * * *"]
+
+[vars]
+# GMAIL_REAUTH_REMINDER_ENDPOINT must be set via `wrangler secret` or dashboard
+# e.g. https://yourapp.vercel.app/api/cron/gmail-reauth-reminder
