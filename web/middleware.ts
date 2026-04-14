@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
+import type { User } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
-import { isAuthorizedAdmin } from "@/lib/auth";
+import { isAuthorizedAdmin } from "./lib/auth";
 
 export async function middleware(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -12,6 +13,7 @@ export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(url, anon, {
+    db: { schema: "vbnym" },
     cookies: {
       getAll() {
         return request.cookies.getAll();
@@ -28,9 +30,13 @@ export async function middleware(request: NextRequest) {
     },
   });
 
+  // `SupabaseAuthClient` typings omit `getUser` in some Edge/TS combinations; runtime API is correct.
+  const auth = supabase.auth as unknown as {
+    getUser: () => Promise<{ data: { user: User | null } }>;
+  };
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await auth.getUser();
 
   const path = request.nextUrl.pathname;
   if (path.startsWith("/admin") && !path.startsWith("/admin/login")) {
