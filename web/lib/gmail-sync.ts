@@ -1,6 +1,6 @@
 import { google } from "googleapis";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Game, Signup } from "@/types/vbnym";
+import type { AdminSupabaseClient } from "@/lib/supabase/admin";
 import { sendTransactionalEmail } from "@/lib/notifications";
 import {
   formatGameCourtLine,
@@ -225,7 +225,7 @@ function paymentConfirmedEmailText(opts: {
 }
 
 async function sendPaymentConfirmationEmail(
-  admin: SupabaseClient,
+  admin: AdminSupabaseClient,
   signup: Pick<Signup, "id" | "email" | "payment_code" | "game_id">
 ): Promise<void> {
   const { data: signupFull } = await admin
@@ -268,7 +268,7 @@ async function sendPaymentConfirmationEmail(
 }
 
 export async function syncPaidSignupsFromGmail(
-  admin: SupabaseClient,
+  admin: AdminSupabaseClient,
   origin: string
 ): Promise<number> {
   const { data: settings, error: settingsError } = await admin

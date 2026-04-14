@@ -1,9 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { SupabaseClient, User } from "@supabase/supabase-js";
+import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { isAuthorizedAdmin } from "@/lib/auth";
+
+type ServerSupabase = Awaited<ReturnType<typeof createClient>>;
 
 function organizerDisplayName(user: User): string {
   const meta = user.user_metadata ?? {};
@@ -18,7 +20,7 @@ function organizerDisplayName(user: User): string {
 }
 
 async function insertOrganizerSignupIfMissing(
-  supabase: SupabaseClient,
+  supabase: ServerSupabase,
   opts: { gameId: string; email: string; name: string }
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const email = opts.email.trim().toLowerCase();

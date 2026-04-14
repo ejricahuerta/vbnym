@@ -40,6 +40,8 @@ export function isAllowedAdminEmail(email: string | null | undefined): boolean {
 }
 
 /** Google OAuth session for a user allowed to use organizer admin. */
-export function isAuthorizedAdmin(user: AuthUserLike): boolean {
+export function isAuthorizedAdmin(
+  user: AuthUserLike
+): user is NonNullable<AuthUserLike> {
   return isAdminUser(user) && isAllowedAdminEmail(user?.email);
 }

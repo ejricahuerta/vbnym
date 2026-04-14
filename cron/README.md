@@ -31,9 +31,10 @@ wrangler secret put PAYMENT_SYNC_CRON_TOKEN
 
 Current schedule in `wrangler.toml`:
 
-- `* * * * *` (every minute)
+- `* * * * *` (every minute) — runs payment sync each tick
+- Gmail reauth reminder runs at **12:00 UTC** on the same tick (see `src/index.ts`), so only one Cloudflare cron expression is used (plan limit on total triggers).
 
-Change it in `[triggers] crons` if you want a different cadence.
+Change `[triggers] crons` if you want a different cadence.
 
 ## 4) Deploy
 

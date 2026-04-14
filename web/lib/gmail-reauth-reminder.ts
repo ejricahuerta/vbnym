@@ -1,5 +1,5 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { getAdminExplicitEmailAllowlist } from "@/lib/auth";
+import type { AdminSupabaseClient } from "@/lib/supabase/admin";
 import { sendTransactionalEmail } from "@/lib/notifications";
 
 type AdminGmailReminderRow = {
@@ -47,7 +47,7 @@ function reminderRecipients(connectedEmail: string | null | undefined): string[]
  * `GMAIL_OAUTH_REFRESH_VALID_DAYS` (e.g. 7 for Google "testing" refresh behaviour, 180+ otherwise).
  */
 export async function maybeSendGmailReauthReminder(
-  admin: SupabaseClient,
+  admin: AdminSupabaseClient,
   origin: string
 ): Promise<{ ok: true; sent: number; skipped: string } | { ok: false; error: string }> {
   const { data: row, error } = await admin

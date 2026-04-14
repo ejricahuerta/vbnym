@@ -1,5 +1,5 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Game, Signup } from "@/types/vbnym";
+import type { AdminSupabaseClient } from "@/lib/supabase/admin";
 import { sendTransactionalEmail } from "@/lib/notifications";
 import {
   formatGameCourtLine,
@@ -95,7 +95,7 @@ function holdExpiredEmailText(opts: {
  * Called from the payment sync cron to keep the roster clean and players informed.
  */
 export async function notifyAndCleanExpiredHolds(
-  admin: SupabaseClient
+  admin: AdminSupabaseClient
 ): Promise<number> {
   const nowIso = new Date().toISOString();
 

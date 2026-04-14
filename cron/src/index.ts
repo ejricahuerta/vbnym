@@ -35,13 +35,16 @@ async function runGmailReauthReminder(env: Env): Promise<void> {
   console.log(`Gmail reauth reminder success: ${text}`);
 }
 
+function isNoonUtc(scheduledTimeMs: number): boolean {
+  const d = new Date(scheduledTimeMs);
+  return d.getUTCHours() === 12 && d.getUTCMinutes() === 0;
+}
+
 export default {
   async scheduled(controller: ScheduledController, env: Env): Promise<void> {
-    const cron = controller.cron;
-    if (cron === "0 12 * * *") {
+    await runSync(env);
+    if (isNoonUtc(controller.scheduledTime)) {
       await runGmailReauthReminder(env);
-    } else {
-      await runSync(env);
     }
   },
 

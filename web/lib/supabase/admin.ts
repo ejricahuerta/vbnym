@@ -14,3 +14,6 @@ export function createAdminClient() {
     db: { schema: "vbnym" },
   });
 }
+
+/** Service-role client configured for the `vbnym` schema (`db.schema`). */
+export type AdminSupabaseClient = ReturnType<typeof createAdminClient>;

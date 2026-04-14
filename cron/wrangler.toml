@@ -1,9 +1,12 @@
 name = "vbnym-payment-sync-cron"
 main = "src/index.ts"
 compatibility_date = "2026-04-13"
+# Pick one when multiple accounts are linked (or set CLOUDFLARE_ACCOUNT_ID). EXD: d0dbb074ddb3e35eb91043ef680f5a68
+account_id = "8a60d143ab38c2766a3ca7c1b0c82a80"
 
 [triggers]
-crons = ["* * * * *", "0 12 * * *"]
+# Single expression stays under the account cron-trigger limit; daily noon UTC is handled in `src/index.ts`.
+crons = ["* * * * *"]
 
 [vars]
 # GMAIL_REAUTH_REMINDER_ENDPOINT must be set via `wrangler secret` or dashboard
