@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default async function ProfilePage() {
-  redirect("/my-games");
+  redirect("/app/my-games");
 }

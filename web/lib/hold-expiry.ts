@@ -127,7 +127,7 @@ export async function notifyAndCleanExpiredHolds(
     const game = gamesById.get(row.game_id);
     if (!game) continue;
 
-    const gameUrl = new URL(`/games/${game.id}`, appUrl).toString();
+    const gameUrl = new URL(`/app/games/${game.id}`, appUrl).toString();
     try {
       await sendTransactionalEmail({
         to: row.email,

@@ -1,18 +1,11 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { Loader2, Mail, Search } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { lookupGamesByEmail, type LookupResult } from "@/actions/lookup-games";
+import { Loader2, Mail } from "lucide-react";
+import { requestPlayerMagicLink } from "@/actions/request-player-magic-link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { GameCard } from "@/components/games/game-card";
-import {
-  getCookieConsent,
-  saveGameId,
-  setCookieConsent,
-} from "@/lib/client/game-cookies";
 import {
   Dialog,
   DialogContent,
@@ -21,45 +14,51 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  PLAYER_MAGIC_LINK_TTL_MS,
+  PLAYER_RECOVER_SESSION_MAX_AGE_SEC,
+} from "@/lib/player-recover-cookie";
+import { cn } from "@/lib/utils";
+
+const LINK_MINUTES = Math.max(1, Math.round(PLAYER_MAGIC_LINK_TTL_MS / 60_000));
+const SESSION_DAYS = Math.max(1, Math.round(PLAYER_RECOVER_SESSION_MAX_AGE_SEC / 86_400));
 
 export function FindMyGamesDialog({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
-  const [result, setResult] = useState<LookupResult | null>(null);
   const [pending, startTransition] = useTransition();
-  const [searched, setSearched] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => setMounted(true), []);
+  // Hydration gate: render trigger-only on server/first paint to avoid Radix id mismatch.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional client-only gate for Dialog
+    setMounted(true);
+  }, []);
 
   function resetState() {
     setEmail("");
-    setResult(null);
-    setSearched(false);
+    setSent(false);
+    setError(null);
   }
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setError(null);
+    setSent(false);
     const fd = new FormData(e.currentTarget);
     startTransition(async () => {
-      const res = await lookupGamesByEmail(fd);
-      setResult(res);
-      setSearched(true);
-
-      if (res.ok && res.games && res.games.length > 0) {
-        if (getCookieConsent() !== "granted") {
-          setCookieConsent("granted");
-        }
-        for (const g of res.games) {
-          saveGameId(g.id);
-        }
-        router.refresh();
+      const res = await requestPlayerMagicLink(fd);
+      if (!res.ok && res.error) {
+        setError(res.error);
+        return;
       }
+      setSent(true);
     });
   }
 
@@ -74,22 +73,17 @@ export function FindMyGamesDialog({
       }}
     >
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent
-        className="max-h-[85vh] overflow-y-auto sm:max-w-lg"
-        showCloseButton
-      >
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg" showCloseButton>
         <DialogHeader>
           <DialogTitle>Find my games</DialogTitle>
           <DialogDescription>
-            Enter the email you used to sign up and we&apos;ll find your
-            upcoming games.
+            Enter the email you used to sign up. We will email you a sign-in link. The link expires
+            in about {LINK_MINUTES} minute{LINK_MINUTES === 1 ? "" : "s"}; after you open it, your
+            browser stays signed in for about {SESSION_DAYS} day{SESSION_DAYS === 1 ? "" : "s"}.
           </DialogDescription>
         </DialogHeader>
 
-        <form
-          onSubmit={onSubmit}
-          className="flex flex-col gap-3 sm:flex-row sm:items-end"
-        >
+        <form onSubmit={onSubmit} className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <div className="flex-1 space-y-1.5">
             <Label htmlFor="find-games-email" className="sr-only">
               Email
@@ -113,37 +107,28 @@ export function FindMyGamesDialog({
             {pending ? (
               <Loader2 className="size-4 animate-spin" aria-hidden />
             ) : (
-              <Search className="size-4" aria-hidden />
+              <Mail className="size-4" aria-hidden />
             )}
-            Find my games
+            Email sign-in link
           </Button>
         </form>
 
-        {result?.error ? (
-          <p className="text-sm text-destructive">{result.error}</p>
-        ) : null}
-
-        {searched && result?.ok && result.games?.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No upcoming games found for this email. You may have used a
-            different email to sign up.
+        {error ? (
+          <p className="text-sm text-destructive" role="alert">
+            {error}
           </p>
         ) : null}
 
-        {result?.ok && result.games && result.games.length > 0 ? (
-          <div className="space-y-4 pt-2">
-            <p className="text-sm font-medium text-foreground">
-              Found {result.games.length} upcoming game
-              {result.games.length === 1 ? "" : "s"} — saved to this browser
-            </p>
-            <ul className="flex flex-col gap-4">
-              {result.games.map((g) => (
-                <li key={g.id}>
-                  <GameCard game={g} signups={g.signups} />
-                </li>
-              ))}
-            </ul>
-          </div>
+        {sent ? (
+          <p
+            className={cn(
+              "rounded-xl border border-border/80 bg-muted/30 px-4 py-3 text-sm text-foreground"
+            )}
+            role="status"
+          >
+            If that address has an upcoming game with us, check your inbox. If you do not see it,
+            check spam. You can close this dialog and open the link when it arrives.
+          </p>
         ) : null}
       </DialogContent>
     </Dialog>

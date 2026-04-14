@@ -88,7 +88,7 @@ export function GamesMap({ games }: Props) {
                   {game.date} · {formatGameTimeRangeLabel(game)}
                 </p>
                 <Button variant="link" className="h-auto p-0 text-sm font-medium" asChild>
-                  <Link href={`/games/${game.id}`}>View & join</Link>
+                  <Link href={`/app/games/${game.id}`}>View & join</Link>
                 </Button>
               </div>
             </Popup>

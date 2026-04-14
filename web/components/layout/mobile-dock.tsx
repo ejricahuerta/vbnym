@@ -11,8 +11,9 @@ type DockSection = "games" | "venues" | "myGames" | "community";
 
 function activeSection(pathname: string, hash: string): DockSection {
   if (pathname === "/community") return "community";
-  if (pathname === "/my-games") return "myGames";
-  if (pathname.startsWith("/games/")) return "games";
+  if (pathname === "/app/my-games") return "myGames";
+  if (pathname.startsWith("/app/games/")) return "games";
+  if (pathname === "/app") return "games";
   if (pathname !== "/") return "games";
   const h = (hash || "#games").toLowerCase();
   if (h === "#venue" || h.startsWith("#venue")) return "venues";
@@ -23,7 +24,7 @@ export function MobileDock() {
   const pathname = usePathname();
   const isMarketingHome = pathname === "/";
   const navLink = (anchor: string) => (isMarketingHome ? anchor : `/${anchor}`);
-  const homeSectionHref = isMarketingHome ? navLink("#games") : "/#games";
+  const gamesScheduleHref = "/app";
   const [hash, setHash] = useState("");
 
   useEffect(() => {
@@ -52,7 +53,7 @@ export function MobileDock() {
       <div className="mx-auto flex max-w-lg items-stretch justify-around gap-0 px-1 pt-1">
         <Button variant="ghost" asChild className={itemClass("games")}>
           <Link
-            href={homeSectionHref}
+            href={gamesScheduleHref}
             className="flex flex-col items-center justify-center gap-0.5 py-2 text-center text-[0.625rem] font-semibold uppercase leading-tight tracking-wide"
           >
             <Compass className="size-5 shrink-0" aria-hidden />
@@ -70,7 +71,7 @@ export function MobileDock() {
         </Button>
         <Button variant="ghost" asChild className={itemClass("myGames")}>
           <Link
-            href="/my-games"
+            href="/app/my-games"
             className="flex flex-col items-center justify-center gap-0.5 py-2 text-center text-[0.625rem] font-semibold uppercase leading-tight tracking-wide"
           >
             <CalendarDays className="size-5 shrink-0" aria-hidden />

@@ -306,11 +306,12 @@ export async function signupForRun(formData: FormData): Promise<SignupResult> {
   }
 
   revalidatePath("/");
-  revalidatePath(`/games/${gameId}`);
+  revalidatePath("/app");
+  revalidatePath(`/app/games/${gameId}`);
   const price = Number(game.price);
   const totalDue = Math.round(price * newHeads * 100) / 100;
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  const gameUrl = new URL(`/games/${gameId}`, appUrl).toString();
+  const gameUrl = new URL(`/app/games/${gameId}`, appUrl).toString();
   const policiesUrl = playerPoliciesAbsoluteUrl();
 
   const emailOpts = {

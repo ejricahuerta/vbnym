@@ -191,6 +191,111 @@ export function daysUntilOpen(game: Game): number | null {
   return Math.ceil(diff / 86400000);
 }
 
+/** True if game.date is today (local clock). */
+export function isGameToday(game: Pick<Game, "date">): boolean {
+  const today = new Date();
+  const d = new Date(`${game.date}T12:00:00`);
+  return (
+    d.getFullYear() === today.getFullYear() &&
+    d.getMonth() === today.getMonth() &&
+    d.getDate() === today.getDate()
+  );
+}
+
+/**
+ * List-card left rail: large start clock (e.g. "7:00") + second line ("PM tonight" when the run is today).
+ */
+export function formatGameCardTimeRail(
+  game: Pick<Game, "time" | "end_time" | "date">
+): { primary: string; secondary: string } {
+  const startNorm = gameTimeToTimeInputValue(game.time);
+  if (!startNorm) {
+    const t = String(game.time ?? "").trim();
+    return { primary: t || "—", secondary: "" };
+  }
+  const start = parseGameTimeToParts(game.time);
+  const clock = clockHourMinuteOnly(start.hour, start.minute);
+  const period = dayPeriodLabel(start.hour, start.minute);
+  const date = formatGameDateParts(game.date);
+  const secondary = isGameToday(game)
+    ? `${period} tonight`
+    : `${period} · ${date.dow} ${date.day} ${date.mon}`;
+  return { primary: clock, secondary };
+}
+
+/**
+ * Uppercase headline strip for the top of a game card — when it is, court, venue cue (comma before split).
+ */
+export function formatGameCardTonightStrip(game: Pick<Game, "date" | "court" | "location">): string {
+  const date = formatGameDateParts(game.date);
+  const parts: string[] = [];
+  if (isGameToday(game)) {
+    parts.push("TONIGHT");
+  } else {
+    parts.push(`${date.dow} ${date.day} ${date.mon}`);
+  }
+  const court = typeof game.court === "string" ? game.court.trim() : "";
+  if (court) {
+    parts.push(`COURT ${court.toUpperCase()}`);
+  }
+  const loc = game.location.trim();
+  const venueHead = (loc.split(",")[0] ?? loc).trim();
+  if (venueHead) {
+    parts.push(venueHead.toUpperCase());
+  }
+  return parts.join(" · ");
+}
+
+/**
+ * One-line uppercase meta for the compact “Tonight” spotlight (e.g. `COURT A · 4 SPOTS LEFT`).
+ */
+export function formatTonightSpotMetaCaps(game: Game, signups: Signup[]): string {
+  const bits: string[] = [];
+  const court = typeof game.court === "string" ? game.court.trim() : "";
+  if (court) {
+    bits.push(`COURT ${court.toUpperCase()}`);
+  } else {
+    const head = (game.location.split(",")[0] ?? game.location).trim();
+    if (head) {
+      bits.push(head.toUpperCase());
+    }
+  }
+  if (game.listed === false) {
+    bits.push("INVITE ONLY");
+    return bits.join(" · ");
+  }
+  if (registrationNotYetOpen(game)) {
+    bits.push("OPENS LATER");
+    return bits.join(" · ");
+  }
+  const sl = spotsLeft(game, signups);
+  if (sl <= 0) {
+    bits.push("FULL");
+  } else {
+    bits.push(`${sl} SPOT${sl === 1 ? "" : "S"} LEFT`);
+  }
+  return bits.join(" · ");
+}
+
+/** Street-style line under the title in the Tonight spotlight (address when distinct, else venue line). */
+export function formatTonightSpotVenueLine(game: Pick<Game, "location" | "address">): string {
+  const addr = typeof game.address === "string" ? game.address.trim() : "";
+  if (addr && hasDistinctGameAddress(game.location, game.address)) {
+    return addr;
+  }
+  return copyableVenueLineForClipboard(game.location, game.address);
+}
+
+/** True if game.date is within the next 7 days (today inclusive). */
+export function isGameThisWeek(game: Pick<Game, "date">): boolean {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const weekEnd = new Date(today);
+  weekEnd.setDate(weekEnd.getDate() + 7);
+  const d = new Date(`${game.date}T12:00:00`);
+  return d >= today && d < weekEnd;
+}
+
 function pad2(n: number): string {
   return String(n).padStart(2, "0");
 }

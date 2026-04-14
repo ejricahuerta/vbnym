@@ -73,6 +73,7 @@ export async function createVenue(formData: FormData) {
   revalidatePath("/admin/venues");
   revalidatePath("/admin/games");
   revalidatePath("/", "page");
+  revalidatePath("/app");
   return { ok: true as const };
 }
 
@@ -106,6 +107,7 @@ export async function updateVenue(formData: FormData) {
   revalidatePath("/admin/games");
   revalidatePath(`/admin/venues/${parsed.id}/edit`);
   revalidatePath("/", "page");
+  revalidatePath("/app");
   return { ok: true as const };
 }
 
@@ -128,4 +130,5 @@ export async function deleteVenue(formData: FormData): Promise<void> {
   revalidatePath("/admin/venues");
   revalidatePath("/admin/games");
   revalidatePath("/", "page");
+  revalidatePath("/app");
 }

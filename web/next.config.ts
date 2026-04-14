@@ -6,6 +6,12 @@ const nextConfig: NextConfig = {
   experimental: {
     appNewScrollHandler: true,
   },
+  async redirects() {
+    return [
+      { source: "/my-games", destination: "/app/my-games", permanent: true },
+      { source: "/games/:id", destination: "/app/games/:id", permanent: true },
+    ];
+  },
 };
 
 export default nextConfig;

@@ -396,7 +396,7 @@ export async function processWaitlistForGame(
 
     const courtSubject = formatGameCourtLine(game.court);
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-    const gameUrl = new URL(`/games/${game.id}`, appUrl).toString();
+    const gameUrl = new URL(`/app/games/${game.id}`, appUrl).toString();
     const policiesUrl = playerPoliciesAbsoluteUrl();
     const inviteOpts = {
       game,

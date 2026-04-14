@@ -14,9 +14,18 @@ type ResendEmailResponse = {
 };
 
 export async function sendTransactionalEmail(input: SendEmailInput): Promise<void> {
+  await sendTransactionalEmailResult(input);
+}
+
+/** Same as {@link sendTransactionalEmail} but returns whether Resend accepted the send. */
+export async function sendTransactionalEmailResult(
+  input: SendEmailInput
+): Promise<{ ok: true } | { ok: false; error: string }> {
   const resendKey = process.env.RESEND_API_KEY;
   const from = process.env.RESEND_FROM_EMAIL ?? "NYM Volleyball <nymvb@ednsy.com>";
-  if (!resendKey) return;
+  if (!resendKey) {
+    return { ok: false, error: "Email is not configured (missing RESEND_API_KEY)." };
+  }
 
   try {
     const response = await fetch("https://api.resend.com/emails", {
@@ -35,10 +44,14 @@ export async function sendTransactionalEmail(input: SendEmailInput): Promise<voi
     });
     const payload = (await response.json()) as ResendEmailResponse;
     if (!response.ok || payload.error) {
-      console.error(payload.error?.message ?? "Could not send transactional email.");
+      const msg = payload.error?.message ?? "Could not send transactional email.";
+      console.error(msg);
+      return { ok: false, error: msg };
     }
+    return { ok: true };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Email send failed.";
     console.error(message);
+    return { ok: false, error: message };
   }
 }

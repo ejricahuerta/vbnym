@@ -217,8 +217,9 @@ export async function createGame(formData: FormData) {
   revalidatePath("/admin/games");
   revalidatePath("/admin/signups");
   revalidatePath("/", "page");
+  revalidatePath("/app");
   if (parsed.admin_will_play && inserted?.id) {
-    revalidatePath(`/games/${inserted.id as string}`);
+    revalidatePath(`/app/games/${inserted.id as string}`);
   }
   return { ok: true as const };
 }
@@ -271,8 +272,9 @@ export async function updateGame(formData: FormData) {
   revalidatePath("/admin/games");
   revalidatePath("/admin/signups");
   revalidatePath(`/admin/games/${parsed.id}/edit`);
-  revalidatePath(`/games/${parsed.id}`);
+  revalidatePath(`/app/games/${parsed.id}`);
   revalidatePath("/", "page");
+  revalidatePath("/app");
   return { ok: true as const };
 }
 
@@ -294,4 +296,5 @@ export async function deleteGame(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/games");
   revalidatePath("/", "page");
+  revalidatePath("/app");
 }

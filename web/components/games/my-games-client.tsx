@@ -16,6 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { clearPlayerRecoverSession } from "@/actions/clear-player-recover-session";
 import { clearPlayerBrowserData } from "@/lib/client/game-cookies";
 
 export function MyGamesClient({
@@ -35,8 +36,9 @@ export function MyGamesClient({
     [games, savedGameIds]
   );
 
-  function onClearSaved() {
+  async function onClearSaved() {
     clearPlayerBrowserData();
+    await clearPlayerRecoverSession();
     setCleared(true);
     setConfirmOpen(false);
     router.refresh();
@@ -44,7 +46,7 @@ export function MyGamesClient({
 
   if (saved.length === 0) {
     return (
-      <Card className="gap-0 overflow-hidden rounded-2xl shadow-sm">
+      <Card className="gap-0 overflow-hidden rounded-xl border border-accent/35 shadow-sm">
         <CardContent className="flex flex-col items-center px-6 py-10 text-center sm:px-10 sm:py-14">
           <div className="mb-4 flex size-14 items-center justify-center rounded-full bg-accent/10 text-accent sm:size-16">
             <CalendarDays className="size-7 sm:size-8" aria-hidden />
@@ -56,7 +58,7 @@ export function MyGamesClient({
             Sign up for a game and it will show up here with your payment details and roster info.
           </p>
           <Button asChild className="mt-6 rounded-xl" size="lg">
-            <Link href="/">Browse games</Link>
+            <Link href="/app">Browse games</Link>
           </Button>
           {savedGameIds.length > 0 && !cleared ? (
             <p className="mt-5 max-w-xs text-xs text-muted-foreground">
@@ -70,10 +72,14 @@ export function MyGamesClient({
 
   return (
     <div className="space-y-6">
-      <ul className="flex flex-col gap-4 xl:grid xl:grid-cols-2 xl:items-start xl:gap-4">
+      <ul className="flex flex-col gap-3">
         {saved.map((g) => (
           <li key={g.id}>
-            <GameCard game={g} signups={signupsByGameId[g.id] ?? []} />
+            <GameCard
+              game={g}
+              signups={signupsByGameId[g.id] ?? []}
+              ctaLabel="See details"
+            />
           </li>
         ))}
       </ul>
@@ -93,8 +99,8 @@ export function MyGamesClient({
           <DialogHeader>
             <DialogTitle>Clear saved games?</DialogTitle>
             <DialogDescription>
-              This removes locally saved games from this browser. It does not cancel any sign-ups
-              you already made.
+              This removes locally saved games and your email sign-in session from this browser.
+              It does not cancel any sign-ups you already made.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">

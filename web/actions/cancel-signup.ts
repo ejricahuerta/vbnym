@@ -163,7 +163,8 @@ export async function cancelSignup(formData: FormData): Promise<CancelResult> {
   await processWaitlistForGame(admin, game);
 
   revalidatePath("/");
-  revalidatePath(`/games/${gameId}`);
+  revalidatePath("/app");
+  revalidatePath(`/app/games/${gameId}`);
 
   const policiesUrl = playerPoliciesAbsoluteUrl();
   try {

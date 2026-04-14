@@ -240,7 +240,7 @@ export function HomeGameCard({
                     ))}
                   </ul>
                   <Button asChild className="rounded-xl bg-primary text-primary-foreground hover:bg-primary/90">
-                    <Link href={`/games/${id}`}>Game details</Link>
+                    <Link href={`/app/games/${id}`}>Game details</Link>
                   </Button>
                 </DialogContent>
               </Dialog>
@@ -249,7 +249,7 @@ export function HomeGameCard({
         </div>
 
         <Link
-          href={`/games/${id}`}
+          href={`/app/games/${id}`}
           className={
             full
               ? "mt-auto block w-full rounded-xl bg-muted py-3 text-center text-sm font-bold text-muted-foreground transition hover:bg-muted/80"

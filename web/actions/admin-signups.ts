@@ -52,4 +52,5 @@ export async function setSignupPaid(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/signups");
   revalidatePath("/");
+  revalidatePath("/app");
 }

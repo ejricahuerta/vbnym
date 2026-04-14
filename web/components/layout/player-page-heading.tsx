@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 export function PlayerPageHeading({
   title,
   description,
-  backHref = "/",
+  backHref = "/app",
   backLabel = "Back to games",
 }: {
   title: string;

@@ -247,7 +247,7 @@ async function sendPaymentConfirmationEmail(
   const headCount = 1 + (s.friends?.length ?? 0);
   const totalPaid = Math.round(Number(game.price) * headCount * 100) / 100;
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  const gameUrl = new URL(`/games/${game.id}`, appUrl).toString();
+  const gameUrl = new URL(`/app/games/${game.id}`, appUrl).toString();
   const policiesUrl = playerPoliciesAbsoluteUrl();
 
   const opts = {

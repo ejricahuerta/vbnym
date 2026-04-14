@@ -1,10 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import type { AuthUser } from "@supabase/supabase-js";
-import type { NextRequest } from "next/dist/server/web/spec-extension/request";
-import { NextResponse } from "next/dist/server/web/spec-extension/response";
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { isAuthorizedAdmin } from "./lib/auth";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !anon) {

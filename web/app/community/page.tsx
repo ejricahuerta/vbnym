@@ -28,7 +28,7 @@ export default function CommunityPage() {
         </div>
 
         <p className="mt-10 text-center text-sm text-muted-foreground">
-          <Link href="/" className="font-medium text-accent underline decoration-accent/50 underline-offset-4 hover:opacity-80">
+          <Link href="/app" className="font-medium text-accent underline decoration-accent/50 underline-offset-4 hover:opacity-80">
             Back to games
           </Link>
         </p>

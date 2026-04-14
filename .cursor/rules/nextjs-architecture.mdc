@@ -1,0 +1,164 @@
+---
+description: Enforce Next.js App Router + shadcn/ui architecture. Apply to all .ts and .tsx files.
+globs:
+  - "**/*.ts"
+  - "**/*.tsx"
+alwaysApply: true
+---
+
+# Architecture rules — Next.js App Router + shadcn/ui
+
+Reference document: `architecture.md` (root of repo).
+These rules are derived from it. When a rule here and `architecture.md` conflict, `architecture.md` wins — update this file to match.
+
+---
+
+## Layer boundaries (enforced on every file)
+
+### `app/` — routing only
+- `page.tsx` and `layout.tsx` files must contain at most: imports, one exported default function, one JSX return that renders a single feature component.
+- No data fetching, no hooks, no business logic, no multi-component JSX.
+
+```tsx
+// CORRECT
+import { SettingsPage } from '@/components/features/settings/SettingsPage'
+export default function Page() { return <SettingsPage /> }
+
+// WRONG — data fetch in route file
+export default async function Page() {
+  const user = await getUser() // ❌ move this into SettingsPage
+  return <Settings user={user} />
+}
+```
+
+### `server/queries/` — reads
+- First line after imports: `import 'server-only'`
+- Every exported function is wrapped with `cache()` from `'react'`
+- Returns typed value or `null` / `[]` — never throws for empty data
+- No mutations, no `revalidatePath`, no side effects
+
+### `server/actions/` — writes
+- First line of file: `'use server'`
+- Structure: auth check → Zod validation → DB mutation → revalidate → return `ActionResult<T>`
+- Always returns `ActionResult<T>` — never `void`, never throws to caller
+- Never imported at the module level of a `'use client'` file
+
+### `components/ui/` — untouchable
+- Zero edits. Zero. Add via `npx shadcn@latest add`.
+- Extend in `components/shared/` instead.
+
+---
+
+## `'use client'` placement
+
+Push `'use client'` as deep as possible:
+
+```
+page.tsx (RSC)
+└── FeaturePage.tsx (RSC — fetches data)
+    ├── StaticSection.tsx (RSC)
+    └── InteractiveForm.tsx ('use client' ← only here)
+```
+
+Do not mark a component `'use client'` unless it uses:
+- `useState`, `useReducer`, `useRef`, `useEffect`
+- Browser APIs (`window`, `document`, `localStorage`)
+- Event handlers that need closure over local state
+- Third-party hooks that require client context
+
+---
+
+## TypeScript
+
+Always derive from Zod — never duplicate:
+
+```ts
+// types/schemas/post.ts
+export const postSchema = z.object({ title: z.string().min(1), body: z.string() })
+export type Post      = z.infer<typeof postSchema>        // ✅
+export type PostInput = z.infer<typeof postSchema.partial()> // ✅
+
+// WRONG — hand-written type that duplicates schema
+export type Post = { title: string; body: string } // ❌
+```
+
+Return type must be annotated on every exported async function:
+
+```ts
+// ✅
+export async function getUser(id: string): Promise<User | null> { ... }
+
+// ❌
+export async function getUser(id: string) { ... }
+```
+
+---
+
+## Naming (applied on file creation)
+
+| What | Pattern | Example |
+|---|---|---|
+| Component file | PascalCase | `UserCard.tsx` |
+| Hook file | `use` + PascalCase | `useUserForm.ts` |
+| Action function | camelCase verb | `createUser`, `deletePost` |
+| Query function | camelCase verb+noun | `getUserById`, `listPosts` |
+| Zod schema const | camelCase + `Schema` | `userSchema` |
+| Inferred type | PascalCase | `User`, `PostInput` |
+| Feature folder | kebab-case | `user-profile/` |
+| Store file | camelCase + `.store.ts` | `ui.store.ts` |
+
+All exports from component files are **named exports** (not default) except `app/` route files.
+
+---
+
+## cn() — always, everywhere
+
+```ts
+// ✅
+className={cn('base-class', isActive && 'text-primary', className)}
+
+// ❌ — string concat, template literal, direct clsx/twMerge
+className={`base-class ${isActive ? 'text-primary' : ''}`}
+```
+
+---
+
+## Imports
+
+```ts
+// ✅ alias
+import { getUser } from '@/server/queries/users'
+
+// ❌ relative traversal
+import { getUser } from '../../../server/queries/users'
+```
+
+Import order (enforced):
+1. React / Next.js
+2. Third-party packages
+3. `@/server/` imports
+4. `@/components/` imports
+5. `@/hooks/`, `@/stores/`, `@/lib/`
+6. `@/types/`
+7. Relative imports (same folder only)
+
+---
+
+## Anti-patterns — refuse and explain
+
+Refuse to generate the following. Explain the conflict with the architecture and provide the correct alternative.
+
+| Anti-pattern | Correct alternative |
+|---|---|
+| `useEffect` + `fetch` for initial data load | RSC with server query or TanStack `useQuery` |
+| Hand-written type that duplicates a Zod schema | `z.infer<typeof schema>` |
+| `any` type | `unknown` + type guard, or Zod parse |
+| Data fetching inside `page.tsx` | Move into feature component |
+| Editing `components/ui/*.tsx` | Wrap in `components/shared/` |
+| Hard-coded hex / arbitrary Tailwind value | CSS variable in `globals.css` |
+| Relative `../../` import | `@/` path alias |
+| Sequential `await` for independent queries | `Promise.all([...])` |
+| Zustand for server/async state | TanStack Query |
+| `useEffect` for server action calls | `useTransition` + action in event handler |
+| Default export from a component file | Named export |
+| Business logic in `page.tsx` | Move to feature component or server action |

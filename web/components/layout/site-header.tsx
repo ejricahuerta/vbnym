@@ -3,7 +3,6 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { DesktopPrimaryNav } from "@/components/layout/desktop-primary-nav";
-import { FindMyGamesDialog } from "@/components/games/find-my-games-dialog";
 
 export async function SiteHeader() {
   return (
@@ -38,18 +37,17 @@ export async function SiteHeader() {
             </span>
           </Link>
         </Button>
-        <div className="flex shrink-0 items-center justify-end gap-1.5 sm:gap-3">
+        <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5 sm:gap-3">
+          <Button
+            asChild
+            size="sm"
+            className="h-9 shrink-0 rounded-full bg-accent px-3 text-xs font-semibold text-accent-foreground shadow-sm hover:bg-accent/90 md:hidden sm:h-10 sm:px-5 sm:text-sm"
+          >
+            <Link href="/app/my-games">My Games</Link>
+          </Button>
           <Suspense fallback={null}>
             <DesktopPrimaryNav />
           </Suspense>
-          <FindMyGamesDialog>
-            <Button
-              size="sm"
-              className="h-9 shrink-0 rounded-full bg-accent px-3 text-xs font-semibold text-white shadow-sm hover:bg-accent/90 sm:h-10 sm:px-5 sm:text-sm"
-            >
-              My games
-            </Button>
-          </FindMyGamesDialog>
         </div>
       </div>
     </header>

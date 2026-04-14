@@ -13,7 +13,7 @@ export function ShareGameButton({ gameId, gameTitle, ...rest }: Props) {
   const [copied, setCopied] = useState(false);
 
   async function handleShare() {
-    const url = `${window.location.origin}/games/${gameId}`;
+    const url = `${window.location.origin}/app/games/${gameId}`;
     const shareData = { title: gameTitle, url };
 
     if (typeof navigator.share === "function") {
