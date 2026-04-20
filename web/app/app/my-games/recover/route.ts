@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { getPlayerUpcomingGamesByEmail } from "@/lib/data/player-games-by-email";
+import { getPlayerUpcomingGamesByEmail } from "@/server/queries/player-games-by-email";
 import {
   MY_GAMES_COOKIE,
   MY_GAMES_COOKIE_MAX_AGE_SEC,
@@ -14,12 +14,13 @@ import {
   createPlayerRecoverSessionToken,
   verifyPlayerMagicLinkToken,
 } from "@/lib/player-magic-link";
+import { publicOriginFromRequest } from "@/lib/request-public-origin";
 
 function redirect(
   request: NextRequest,
   recover: "ok" | "invalid" | "missing"
 ): NextResponse {
-  const url = new URL("/app/my-games", request.nextUrl.origin);
+  const url = new URL("/app/my-games", publicOriginFromRequest(request));
   url.searchParams.set("recover", recover);
   return NextResponse.redirect(url);
 }
@@ -40,14 +41,14 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return redirect(request, "invalid");
   }
 
-  const games = await getPlayerUpcomingGamesByEmail(verified.email);
+  const { games } = await getPlayerUpcomingGamesByEmail(verified.email);
   const idsFromRoster = games.map((g) => g.id);
   const existing = parseMyGamesCookieValue(
     request.cookies.get(MY_GAMES_COOKIE)?.value
   );
   const merged = [...new Set([...existing, ...idsFromRoster])];
 
-  const url = new URL("/app/my-games", request.nextUrl.origin);
+  const url = new URL("/app/my-games", publicOriginFromRequest(request));
   url.searchParams.set("recover", "ok");
   const res = NextResponse.redirect(url);
 

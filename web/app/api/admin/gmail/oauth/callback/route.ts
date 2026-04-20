@@ -4,11 +4,13 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { exchangeGmailCode } from "@/lib/gmail-sync";
 import { isAuthorizedAdmin } from "@/lib/auth";
 import { gmailAssumedExpiresAfterConnect } from "@/lib/gmail-reauth-reminder";
+import { publicOriginFromRequest } from "@/lib/request-public-origin";
 
 export async function GET(request: NextRequest) {
+  const publicOrigin = publicOriginFromRequest(request);
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
-  const destination = new URL("/admin/payments", request.url);
+  const destination = new URL("/admin/payments", publicOrigin);
 
   if (!code) {
     destination.searchParams.set("error", "missing_google_code");
@@ -26,7 +28,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const admin = createAdminClient();
-    const { refreshToken, connectedEmail } = await exchangeGmailCode(requestUrl.origin, code);
+    const { refreshToken, connectedEmail } = await exchangeGmailCode(publicOrigin, code);
     const connectedAt = new Date();
     const payload: Record<string, string | null> = {};
     if (refreshToken) payload.gmail_refresh_token = refreshToken;

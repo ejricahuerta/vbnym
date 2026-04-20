@@ -3,6 +3,7 @@ import type { AuthUser } from "@supabase/supabase-js";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { isAuthorizedAdmin } from "./lib/auth";
+import { publicOriginFromRequest } from "./lib/request-public-origin";
 
 export async function proxy(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -40,16 +41,16 @@ export async function proxy(request: NextRequest) {
   } = await auth.getUser();
 
   const path = request.nextUrl.pathname;
+  const publicOrigin = publicOriginFromRequest(request);
   if (path.startsWith("/admin") && !path.startsWith("/admin/login")) {
     if (!isAuthorizedAdmin(user)) {
-      const redirectUrl = request.nextUrl.clone();
-      redirectUrl.pathname = "/admin/login";
+      const redirectUrl = new URL("/admin/login", publicOrigin);
       redirectUrl.searchParams.set("next", path);
       return NextResponse.redirect(redirectUrl);
     }
   }
   if (path.startsWith("/admin/login") && isAuthorizedAdmin(user)) {
-    return NextResponse.redirect(new URL("/admin", request.url));
+    return NextResponse.redirect(new URL("/admin", publicOrigin));
   }
   return supabaseResponse;
 }

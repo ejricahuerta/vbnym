@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { isAuthorizedAdmin } from "@/lib/auth";
+import { publicOriginFromRequest } from "@/lib/request-public-origin";
 
 /**
  * Supabase OAuth (e.g. Google) redirects here with ?code=…
@@ -12,7 +13,7 @@ export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
   const nextPath = requestUrl.searchParams.get("next") ?? "/admin";
-  const origin = requestUrl.origin;
+  const origin = publicOriginFromRequest(request);
   const next = nextPath.startsWith("/") ? nextPath : "/admin";
   const failPath = next.startsWith("/admin") ? "/admin/login" : "/";
 
