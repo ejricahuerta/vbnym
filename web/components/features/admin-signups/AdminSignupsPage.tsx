@@ -1,5 +1,4 @@
 import { AdminSignupsTable } from "@/components/admin/admin-signups-table";
-import { PolicyBroadcastPanel } from "@/components/admin/policy-broadcast-panel";
 import { Card, CardContent } from "@/components/ui/card";
 import { getAdminSignupsPageData } from "@/server/queries/admin-signups";
 
@@ -15,7 +14,6 @@ export async function AdminSignupsPage() {
           signup.
         </p>
       </div>
-      <PolicyBroadcastPanel />
       {err ? (
         <Card size="sm" className="border-destructive/30 bg-destructive/10 py-3 text-destructive shadow-none">
           <CardContent className="px-3 py-0 text-sm">{err}</CardContent>

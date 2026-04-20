@@ -1,12 +1,15 @@
-import { AdminGameCard } from "@/components/admin/admin-game-card";
+import { deleteGame } from "@/server/actions/admin-games";
+import { listGamesForAdmin } from "@/server/queries/games";
+import { getVenues } from "@/server/queries/venues";
 import { CreateGameModal } from "@/components/admin/create-game-modal";
 import { CreateVenueModal } from "@/components/admin/create-venue-modal";
 import { Card, CardContent } from "@/components/ui/card";
+import { AdminGamesListInteractive } from "@/components/features/admin-games-list/AdminGamesListInteractive";
 import { venueImageOrPlaceholder } from "@/lib/venue-placeholder-image";
-import { listGamesForAdmin } from "@/server/queries/games";
-import { getVenues } from "@/server/queries/venues";
 
 export async function AdminGamesListPage() {
+  // eslint-disable-next-line react-hooks/purity -- async RSC: one clock snapshot per request for schedule buckets.
+  const referenceTimeMs = Date.now();
   const [{ venues }, { games, error: err }] = await Promise.all([
     getVenues(),
     listGamesForAdmin(),
@@ -14,6 +17,16 @@ export async function AdminGamesListPage() {
 
   const venueImageById = new Map(
     venues.map((v) => [v.id, v.image_url ?? null] as const)
+  );
+
+  const gameImageSrcById = Object.fromEntries(
+    games.map((g) => [
+      g.id,
+      venueImageOrPlaceholder(
+        g.venue_id ? (venueImageById.get(g.venue_id) ?? null) : null,
+        g.venue_id ?? g.id
+      ),
+    ])
   );
 
   return (
@@ -43,18 +56,12 @@ export async function AdminGamesListPage() {
           </Card>
         ) : null}
         {!err && games.length > 0 ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {games.map((g) => (
-              <AdminGameCard
-                key={g.id}
-                game={g}
-                imageSrc={venueImageOrPlaceholder(
-                  g.venue_id ? venueImageById.get(g.venue_id) ?? null : null,
-                  g.venue_id ?? g.id
-                )}
-              />
-            ))}
-          </div>
+          <AdminGamesListInteractive
+            games={games}
+            gameImageSrcById={gameImageSrcById}
+            deleteGameAction={deleteGame}
+            referenceTimeMs={referenceTimeMs}
+          />
         ) : null}
       </div>
     </div>
