@@ -25,12 +25,19 @@ function parseAdminEmails(raw: string | undefined): string[] {
     .filter(Boolean);
 }
 
-/** Comma-separated `ADMIN_EMAILS` (lowercased), for notifications — not every @ednsy.com inbox. */
+/**
+ * Comma-separated `ADMIN_EMAILS` env (trimmed, lowercased entries).
+ * Used for admin-only notifications and as the explicit allowlist alongside `@ednsy.com`.
+ */
 export function getAdminExplicitEmailAllowlist(): string[] {
   return parseAdminEmails(process.env.ADMIN_EMAILS);
 }
 
-/** @ednsy.com addresses, or exact emails listed in ADMIN_EMAILS (comma-separated). */
+/**
+ * Whether this address may use organizer admin: any `@ednsy.com` inbox, or an exact match
+ * in `ADMIN_EMAILS` (comma-separated server env). Same rule for the pre–Google email step and
+ * after OAuth in `/auth/callback`.
+ */
 export function isAllowedAdminEmail(email: string | null | undefined): boolean {
   if (!email) return false;
   const normalized = email.trim().toLowerCase();

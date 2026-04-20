@@ -3,6 +3,7 @@ import type { AuthUser } from "@supabase/supabase-js";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { isAuthorizedAdmin } from "./lib/auth";
+import { supabaseAuthCookieOptions } from "./lib/supabase/auth-cookie-options";
 import { publicOriginFromRequest } from "./lib/request-public-origin";
 
 /** Supabase PKCE often lands on `/` when Dashboard Site URL is wrong (e.g. localhost). */
@@ -26,6 +27,11 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(dest);
   }
 
+  /** Do not refresh/read Supabase session here — it can clobber PKCE cookies before `exchangeCodeForSession`. */
+  if (path === "/auth/callback") {
+    return NextResponse.next();
+  }
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !anon) {
@@ -36,14 +42,13 @@ export async function proxy(request: NextRequest) {
 
   const supabase = createServerClient(url, anon, {
     db: { schema: "vbnym" },
+    cookieOptions: supabaseAuthCookieOptions,
     cookies: {
       getAll() {
         return request.cookies.getAll();
       },
       setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value }) =>
-          request.cookies.set(name, value)
-        );
+        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
         supabaseResponse = NextResponse.next({ request });
         cookiesToSet.forEach(({ name, value, options }) =>
           supabaseResponse.cookies.set(name, value, options)

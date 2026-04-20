@@ -1,10 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+
+import { verifyAdminLoginEmail } from "@/server/actions/verify-admin-login-email";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { createClient } from "@/lib/supabase/client";
+import { cn } from "@/lib/utils";
 
 function decodeCallbackError(code: string | null): string | null {
   if (!code) return null;
@@ -21,34 +26,107 @@ function decodeCallbackError(code: string | null): string | null {
   }
 }
 
+type LoginStep = "email" | "google";
+
 export function LoginForm() {
   const searchParams = useSearchParams();
   const next = searchParams.get("next") ?? "/admin";
   const callbackError = decodeCallbackError(searchParams.get("error"));
+  const [step, setStep] = useState<LoginStep>("email");
+  const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
+  const [verifyPending, startVerify] = useTransition();
+  const [oauthPending, startOAuth] = useTransition();
 
   const displayError = error ?? callbackError;
+  const emailOk = email.trim().toLowerCase().includes("@");
 
-  async function signInWithGoogle() {
+  function submitEmailCheck() {
     setError(null);
-    setPending(true);
-    const supabase = createClient();
-    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
-    const { data, error: oauthErr } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo },
-    });
-    setPending(false);
-    if (oauthErr) {
-      setError(oauthErr.message);
+    const normalized = email.trim().toLowerCase();
+    if (!normalized.includes("@")) {
+      setError("Enter the email you use for admin access.");
       return;
     }
-    if (data.url) {
-      window.location.assign(data.url);
-    } else {
-      setError("Could not start Google sign-in.");
-    }
+    startVerify(async () => {
+      const fd = new FormData();
+      fd.set("email", normalized);
+      const gate = await verifyAdminLoginEmail(fd);
+      if (!gate.ok) {
+        setError(gate.error);
+        return;
+      }
+      setStep("google");
+    });
+  }
+
+  function signInWithGoogle() {
+    setError(null);
+    const normalized = email.trim().toLowerCase();
+    startOAuth(async () => {
+      const supabase = createClient();
+      const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
+      const { data, error: oauthErr } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo,
+          queryParams: { login_hint: normalized },
+        },
+      });
+      if (oauthErr) {
+        setError(oauthErr.message);
+        return;
+      }
+      if (data.url) {
+        window.location.assign(data.url);
+      } else {
+        setError("Could not start Google sign-in.");
+      }
+    });
+  }
+
+  function goBackToEmail() {
+    setError(null);
+    setStep("email");
+  }
+
+  if (step === "google") {
+    return (
+      <div className="flex flex-col gap-4">
+        {displayError ? (
+          <p className="text-sm text-destructive">{displayError}</p>
+        ) : null}
+        <p className="text-sm text-muted-foreground">
+          <span className="font-medium text-foreground">{email.trim().toLowerCase()}</span> is
+          allowed. Continue with Google using that account.
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          size="lg"
+          className="h-11 w-full gap-2 rounded-xl border-2"
+          disabled={oauthPending}
+          onClick={signInWithGoogle}
+        >
+          {oauthPending ? (
+            <Loader2 className="size-5 shrink-0 animate-spin" aria-hidden />
+          ) : (
+            <GoogleMark />
+          )}
+          {oauthPending ? "Redirecting…" : "Continue with Google"}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-auto rounded-xl text-muted-foreground"
+          disabled={oauthPending}
+          onClick={goBackToEmail}
+        >
+          Use a different email
+        </Button>
+      </div>
+    );
   }
 
   return (
@@ -56,28 +134,42 @@ export function LoginForm() {
       {displayError ? (
         <p className="text-sm text-destructive">{displayError}</p>
       ) : null}
-      <Button
-        type="button"
-        variant="outline"
-        size="lg"
-        className="h-11 w-full gap-2 rounded-xl border-2"
-        disabled={pending}
-        onClick={signInWithGoogle}
+      <form
+        className="flex flex-col gap-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          submitEmailCheck();
+        }}
       >
-        {pending ? (
-          <Loader2 className="size-5 shrink-0 animate-spin" aria-hidden />
-        ) : (
-          <GoogleMark />
-        )}
-        {pending ? "Redirecting…" : "Continue with Google"}
-      </Button>
-      <p className="text-center text-xs text-muted-foreground">
-        Enable the Google provider in Supabase (Authentication → Providers) and
-        add this redirect URL:{" "}
-        <code className="rounded bg-muted px-1 py-0.5 text-[0.65rem]">
-          …/auth/callback
-        </code>
-      </p>
+        <div className="space-y-1.5">
+          <Label htmlFor="admin-login-email">Admin email</Label>
+          <Input
+            id="admin-login-email"
+            name="email"
+            type="email"
+            autoComplete="username"
+            placeholder="you@ednsy.com"
+            className={cn("rounded-xl bg-muted/50")}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </div>
+        <Button
+          type="submit"
+          size="lg"
+          className="h-11 w-full gap-2 rounded-xl"
+          disabled={verifyPending || !emailOk}
+        >
+          {verifyPending ? (
+            <>
+              <Loader2 className="size-5 shrink-0 animate-spin" aria-hidden />
+              Checking…
+            </>
+          ) : (
+            "Continue"
+          )}
+        </Button>
+      </form>
     </div>
   );
 }

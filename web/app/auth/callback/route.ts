@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+
 import { isAuthorizedAdmin } from "@/lib/auth";
 import { publicOriginFromRequest } from "@/lib/request-public-origin";
+import { supabaseAuthCookieOptions } from "@/lib/supabase/auth-cookie-options";
 
 /**
  * Supabase OAuth (e.g. Google) redirects here with ?code=…
@@ -39,6 +41,7 @@ export async function GET(request: NextRequest) {
 
   const supabase = createServerClient(url, anon, {
     db: { schema: "vbnym" },
+    cookieOptions: supabaseAuthCookieOptions,
     cookies: {
       getAll() {
         return request.cookies.getAll();

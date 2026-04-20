@@ -1,6 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
+import { supabaseAuthCookieOptions } from "@/lib/supabase/auth-cookie-options";
+
 export async function createClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -12,6 +14,7 @@ export async function createClient() {
 
   return createServerClient(url, anon, {
     db: { schema: "vbnym" },
+    cookieOptions: supabaseAuthCookieOptions,
     cookies: {
       getAll() {
         return cookieStore.getAll();
