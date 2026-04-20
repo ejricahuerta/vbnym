@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-import { isAuthorizedAdmin } from "@/lib/auth";
+import { finalizeAdminSupabaseSession } from "@/lib/finalize-admin-supabase-session";
 import { configuredPublicOrigin } from "@/lib/configured-public-origin";
 import { supabaseAuthCookieOptions } from "@/lib/supabase/auth-cookie-options";
 
@@ -60,29 +60,10 @@ export async function GET(request: NextRequest) {
     return fail(error.message);
   }
 
-  if (next.startsWith("/admin")) {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!isAuthorizedAdmin(user)) {
-      return fail("not_allowed");
-    }
-    const { data: settings } = await supabase
-      .from("admin_settings")
-      .select("gmail_refresh_token")
-      .eq("id", 1)
-      .maybeSingle();
-    const hasGmail = Boolean(settings?.gmail_refresh_token?.trim());
-    if (!hasGmail) {
-      const destination = new URL(next, origin);
-      destination.searchParams.set("connect_gmail", "1");
-      const redirect = NextResponse.redirect(destination.toString());
-      response.cookies.getAll().forEach((cookie) => {
-        redirect.cookies.set(cookie);
-      });
-      return redirect;
-    }
-  }
-
-  return response;
+  return finalizeAdminSupabaseSession({
+    supabase,
+    response,
+    origin,
+    nextPath: next,
+  });
 }
