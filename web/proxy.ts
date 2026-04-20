@@ -32,6 +32,11 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  /** Direct Google OAuth → `signInWithIdToken`; avoid touching auth cookies mid-request. */
+  if (path === "/api/auth/google/admin/callback") {
+    return NextResponse.next();
+  }
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !anon) {

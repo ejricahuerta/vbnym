@@ -8,8 +8,6 @@ import { verifyAdminLoginEmail } from "@/server/actions/verify-admin-login-email
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { configuredPublicOrigin } from "@/lib/configured-public-origin";
-import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 function decodeCallbackError(code: string | null): string | null {
@@ -19,6 +17,9 @@ function decodeCallbackError(code: string | null): string | null {
   }
   if (code === "server_config") {
     return "Server is not configured for authentication.";
+  }
+  if (code === "invalid_oauth_state") {
+    return "Sign-in expired or was interrupted. Try again from the admin login page.";
   }
   try {
     return decodeURIComponent(code);
@@ -64,25 +65,11 @@ export function LoginForm() {
   function signInWithGoogle() {
     setError(null);
     const normalized = email.trim().toLowerCase();
-    startOAuth(async () => {
-      const supabase = createClient();
-      const redirectTo = `${configuredPublicOrigin()}/auth/callback?next=${encodeURIComponent(next)}`;
-      const { data, error: oauthErr } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo,
-          queryParams: { login_hint: normalized },
-        },
-      });
-      if (oauthErr) {
-        setError(oauthErr.message);
-        return;
-      }
-      if (data.url) {
-        window.location.assign(data.url);
-      } else {
-        setError("Could not start Google sign-in.");
-      }
+    startOAuth(() => {
+      const start = new URL("/api/auth/google/admin/start", window.location.origin);
+      start.searchParams.set("next", next);
+      start.searchParams.set("login_hint", normalized);
+      window.location.assign(start.toString());
     });
   }
 
