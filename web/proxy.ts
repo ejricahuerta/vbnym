@@ -4,7 +4,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { isAuthorizedAdmin } from "./lib/auth";
 import { supabaseAuthCookieOptions } from "./lib/supabase/auth-cookie-options";
-import { publicOriginFromRequest } from "./lib/request-public-origin";
+import { configuredPublicOrigin } from "./lib/configured-public-origin";
 
 /** Supabase PKCE often lands on `/` when Dashboard Site URL is wrong (e.g. localhost). */
 function isLikelySupabasePkceCode(value: string): boolean {
@@ -19,7 +19,7 @@ export async function proxy(request: NextRequest) {
     strayCode &&
     isLikelySupabasePkceCode(strayCode)
   ) {
-    const publicOrigin = publicOriginFromRequest(request);
+    const publicOrigin = configuredPublicOrigin();
     const dest = new URL("/auth/callback", publicOrigin);
     request.nextUrl.searchParams.forEach((value, key) => {
       dest.searchParams.set(key, value);
@@ -65,7 +65,7 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await auth.getUser();
 
-  const publicOrigin = publicOriginFromRequest(request);
+  const publicOrigin = configuredPublicOrigin();
   if (path.startsWith("/admin") && !path.startsWith("/admin/login")) {
     if (!isAuthorizedAdmin(user)) {
       const redirectUrl = new URL("/admin/login", publicOrigin);

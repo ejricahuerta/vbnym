@@ -2,11 +2,12 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
 import { isAuthorizedAdmin } from "@/lib/auth";
-import { publicOriginFromRequest } from "@/lib/request-public-origin";
+import { configuredPublicOrigin } from "@/lib/configured-public-origin";
 import { supabaseAuthCookieOptions } from "@/lib/supabase/auth-cookie-options";
 
 /**
  * Supabase OAuth (e.g. Google) redirects here with ?code=…
+ * Set `NEXT_PUBLIC_APP_URL` (or `NEXT_PUBLIC_SITE_URL`) to the public origin used for redirects.
  * Add to Supabase → Authentication → URL configuration:
  * - **Site URL**: production origin (not localhost), e.g. https://vbnym.ednsy.com
  * - **Redirect URLs**: http://localhost:3000/auth/callback and
@@ -18,7 +19,7 @@ export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
   const nextPath = requestUrl.searchParams.get("next") ?? "/admin";
-  const origin = publicOriginFromRequest(request);
+  const origin = configuredPublicOrigin();
   const next = nextPath.startsWith("/") ? nextPath : "/admin";
   const failPath = next.startsWith("/admin") ? "/admin/login" : "/";
 
