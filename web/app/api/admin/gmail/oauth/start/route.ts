@@ -2,10 +2,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createGmailOAuthUrl } from "@/lib/gmail-sync";
 import { isAuthorizedAdmin } from "@/lib/auth";
-import { publicOriginFromRequest } from "@/lib/request-public-origin";
+import { configuredPublicOrigin } from "@/lib/configured-public-origin";
 
 export async function GET(request: NextRequest) {
-  const publicOrigin = publicOriginFromRequest(request);
+  const publicOrigin = configuredPublicOrigin();
   const supabase = await createClient();
   const {
     data: { user },

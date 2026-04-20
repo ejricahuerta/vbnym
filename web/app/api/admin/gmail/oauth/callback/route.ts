@@ -4,10 +4,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { exchangeGmailCode } from "@/lib/gmail-sync";
 import { isAuthorizedAdmin } from "@/lib/auth";
 import { gmailAssumedExpiresAfterConnect } from "@/lib/gmail-reauth-reminder";
-import { publicOriginFromRequest } from "@/lib/request-public-origin";
+import { configuredPublicOrigin } from "@/lib/configured-public-origin";
 
 export async function GET(request: NextRequest) {
-  const publicOrigin = publicOriginFromRequest(request);
+  const publicOrigin = configuredPublicOrigin();
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
   const destination = new URL("/admin/payments", publicOrigin);

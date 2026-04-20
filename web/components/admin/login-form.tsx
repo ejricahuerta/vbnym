@@ -8,6 +8,7 @@ import { verifyAdminLoginEmail } from "@/server/actions/verify-admin-login-email
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { configuredPublicOrigin } from "@/lib/configured-public-origin";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -65,7 +66,7 @@ export function LoginForm() {
     const normalized = email.trim().toLowerCase();
     startOAuth(async () => {
       const supabase = createClient();
-      const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
+      const redirectTo = `${configuredPublicOrigin()}/auth/callback?next=${encodeURIComponent(next)}`;
       const { data, error: oauthErr } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {

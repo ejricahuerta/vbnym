@@ -14,13 +14,10 @@ import {
   createPlayerRecoverSessionToken,
   verifyPlayerMagicLinkToken,
 } from "@/lib/player-magic-link";
-import { publicOriginFromRequest } from "@/lib/request-public-origin";
+import { configuredPublicOrigin } from "@/lib/configured-public-origin";
 
-function redirect(
-  request: NextRequest,
-  recover: "ok" | "invalid" | "missing"
-): NextResponse {
-  const url = new URL("/app/my-games", publicOriginFromRequest(request));
+function redirect(recover: "ok" | "invalid" | "missing"): NextResponse {
+  const url = new URL("/app/my-games", configuredPublicOrigin());
   url.searchParams.set("recover", recover);
   return NextResponse.redirect(url);
 }
@@ -28,17 +25,17 @@ function redirect(
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const raw = request.nextUrl.searchParams.get("t");
   if (!raw?.trim()) {
-    return redirect(request, "missing");
+    return redirect("missing");
   }
 
   const verified = verifyPlayerMagicLinkToken(raw);
   if (!verified) {
-    return redirect(request, "invalid");
+    return redirect("invalid");
   }
 
   const sessionToken = createPlayerRecoverSessionToken(verified.email);
   if (!sessionToken) {
-    return redirect(request, "invalid");
+    return redirect("invalid");
   }
 
   const { games } = await getPlayerUpcomingGamesByEmail(verified.email);
@@ -48,7 +45,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   );
   const merged = [...new Set([...existing, ...idsFromRoster])];
 
-  const url = new URL("/app/my-games", publicOriginFromRequest(request));
+  const url = new URL("/app/my-games", configuredPublicOrigin());
   url.searchParams.set("recover", "ok");
   const res = NextResponse.redirect(url);
 
