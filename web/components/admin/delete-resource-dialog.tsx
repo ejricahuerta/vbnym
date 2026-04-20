@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ComponentProps, type FormEvent } from "react";
+import { useState, type ComponentProps, type FormEvent, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -21,6 +21,10 @@ type Props = {
   resourceLabel: string;
   resourceTitle: string;
   triggerText?: string;
+  /** When set, shown instead of `triggerText` (e.g. icon-only trigger). */
+  triggerChildren?: ReactNode;
+  /** Overrides default `aria-label` when using `triggerChildren` (default: `Delete ${resourceLabel}`). */
+  triggerAriaLabel?: string;
   triggerVariant?: ComponentProps<typeof Button>["variant"];
   triggerSize?: ComponentProps<typeof Button>["size"];
   triggerClassName?: string;
@@ -32,6 +36,8 @@ export function DeleteResourceDialog({
   resourceLabel,
   resourceTitle,
   triggerText = "Delete",
+  triggerChildren,
+  triggerAriaLabel,
   triggerVariant = "destructive",
   triggerSize = "sm",
   triggerClassName,
@@ -64,9 +70,10 @@ export function DeleteResourceDialog({
         variant={triggerVariant}
         size={triggerSize}
         className={triggerClassName}
+        aria-label={triggerChildren ? (triggerAriaLabel ?? `Delete ${resourceLabel}`) : undefined}
         onClick={() => setOpen(true)}
       >
-        {triggerText}
+        {triggerChildren ?? triggerText}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">

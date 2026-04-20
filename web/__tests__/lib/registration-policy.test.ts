@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   CANCELLATION_MIN_HOURS_BEFORE_GAME,
+  gameEndUtcMs,
   gameRegionWallClockToUtcMs,
   gameStartUtcMs,
+  getAdminGameSchedulePhase,
   isBeforeCancellationCutoff,
   todayIsoDateInGameScheduleZone,
 } from "@/lib/registration-policy";
@@ -51,6 +53,62 @@ describe("gameStartUtcMs", () => {
     expect(ms).not.toBeNull();
     const withExplicit = gameStartUtcMs({ date: "2026-06-15", time: "7:00 PM" });
     expect(ms).toBe(withExplicit);
+  });
+});
+
+describe("gameEndUtcMs", () => {
+  const base = { date: "2030-06-15", time: "6:00 PM" };
+
+  it("returns start + 2h when end_time is missing", () => {
+    const start = gameStartUtcMs(base)!;
+    expect(gameEndUtcMs(base)).toBe(start + 2 * 60 * 60 * 1000);
+  });
+
+  it("uses parseable end_time after start", () => {
+    const end = gameEndUtcMs({ ...base, end_time: "9:00 PM" });
+    const expected = gameRegionWallClockToUtcMs(2030, 6, 15, 21, 0);
+    expect(end).toBe(expected);
+  });
+
+  it("falls back to start + 2h when end is not after start", () => {
+    const start = gameStartUtcMs(base)!;
+    expect(gameEndUtcMs({ ...base, end_time: "5:00 PM" })).toBe(start + 2 * 60 * 60 * 1000);
+  });
+
+  it("returns null when date is invalid", () => {
+    expect(gameEndUtcMs({ date: "bad", time: "6:00 PM" })).toBeNull();
+  });
+});
+
+describe("getAdminGameSchedulePhase", () => {
+  const game = { date: "2030-06-15", time: "6:00 PM", end_time: "9:00 PM" as string | null };
+  const start = gameStartUtcMs(game)!;
+  const end = gameEndUtcMs(game)!;
+
+  it("returns upcoming before start", () => {
+    expect(getAdminGameSchedulePhase(game, start - 60_000)).toBe("upcoming");
+  });
+
+  it("returns ongoing between start and end", () => {
+    expect(getAdminGameSchedulePhase(game, start + 60_000)).toBe("ongoing");
+    expect(getAdminGameSchedulePhase(game, end - 60_000)).toBe("ongoing");
+  });
+
+  it("returns past after end", () => {
+    expect(getAdminGameSchedulePhase(game, end + 60_000)).toBe("past");
+  });
+
+  it("returns past for an old game via wall-clock window", () => {
+    expect(getAdminGameSchedulePhase({ date: "1990-01-01", time: "", end_time: null }, Date.now())).toBe("past");
+  });
+
+  it("uses date-only fallback when start cannot be resolved", () => {
+    expect(getAdminGameSchedulePhase({ date: "06-15-2030", time: "6:00 PM", end_time: null }, Date.now())).toBe(
+      "upcoming"
+    );
+    expect(getAdminGameSchedulePhase({ date: "1990-06-15", time: "6:00 PM", end_time: null }, Date.now())).toBe(
+      "past"
+    );
   });
 });
 

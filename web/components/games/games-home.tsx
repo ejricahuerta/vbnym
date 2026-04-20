@@ -12,7 +12,6 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   formatGameCardTimeRail,
-  formatGameTimeRangeLabel,
   formatTonightSpotMetaCaps,
   formatTonightSpotVenueLine,
   isGameToday,
@@ -20,6 +19,7 @@ import {
   spotsLeft,
   registrationNotYetOpen,
 } from "@/lib/game-display";
+import { gameMatchesSearchQuery } from "@/lib/game-search-match";
 import { parseGameTimeToParts } from "@/lib/game-time-input";
 import { cn } from "@/lib/utils";
 import type { Game, Signup } from "@/types/vbnym";
@@ -44,18 +44,6 @@ type Props = {
   /** Game IDs the current browser user is already signed up for. */
   myGameIds?: string[];
 };
-
-function matchesQuery(game: Game, q: string): boolean {
-  if (!q.trim()) return true;
-  const s = q.toLowerCase();
-  return (
-    game.location.toLowerCase().includes(s) ||
-    (game.address?.toLowerCase().includes(s) ?? false) ||
-    (game.court?.toLowerCase().includes(s) ?? false) ||
-    game.date.includes(s) ||
-    formatGameTimeRangeLabel(game).toLowerCase().includes(s)
-  );
-}
 
 /** Earliest start first (same calendar day). */
 function compareGamesByStartTime(a: Game, b: Game): number {
@@ -192,7 +180,7 @@ export function GamesHome({
   const filteredGames = useMemo(() => {
     let result = gamesForVenue;
     if (view === "list") {
-      result = result.filter((g) => matchesQuery(g, query));
+      result = result.filter((g) => gameMatchesSearchQuery(g, query));
     }
     if (dateFilter === "tonight") {
       result = result.filter((g) => isGameToday(g));
@@ -207,7 +195,7 @@ export function GamesHome({
     if (view !== "list") return [];
     const candidates = gamesForVenue
       .filter(isGameToday)
-      .filter((g) => matchesQuery(g, query))
+      .filter((g) => gameMatchesSearchQuery(g, query))
       .slice()
       .sort(compareGamesByStartTime);
     return candidates;

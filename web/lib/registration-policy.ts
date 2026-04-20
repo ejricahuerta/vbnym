@@ -1,5 +1,5 @@
 import type { Game } from "@/types/vbnym";
-import { parseGameTimeToParts } from "@/lib/game-time-input";
+import { gameTimeToTimeInputValue, parseGameTimeToParts } from "@/lib/game-time-input";
 
 /** Wall clock for interpreting `game.date` + `game.time`. */
 export const GAME_SCHEDULE_TIMEZONE = "America/Toronto";
@@ -98,6 +98,63 @@ export function gameStartUtcMs(game: Pick<Game, "date" | "time">): number | null
   const { hour, minute } = parseGameTimeToParts(game.time);
   const ms = gameRegionWallClockToUtcMs(y, mo, d, hour, minute);
   return Number.isFinite(ms) ? ms : null;
+}
+
+/** Default run length when `end_time` is missing (matches calendar export behavior). */
+const DEFAULT_GAME_DURATION_MS = 2 * 60 * 60 * 1000;
+
+/**
+ * Scheduled game end as UTC ms, or null if start cannot be resolved.
+ * Uses `end_time` on `game.date` when parseable and strictly after start; otherwise start + 2h.
+ */
+export function gameEndUtcMs(game: Pick<Game, "date" | "time" | "end_time">): number | null {
+  const start = gameStartUtcMs(game);
+  if (start == null) return null;
+  const raw = game.date?.trim();
+  if (!raw) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
+  if (!m) return null;
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+  if (![y, mo, d].every(Number.isFinite)) return null;
+
+  const endRaw = game.end_time?.trim();
+  if (!endRaw || !gameTimeToTimeInputValue(endRaw)) {
+    return start + DEFAULT_GAME_DURATION_MS;
+  }
+
+  const { hour: endHour, minute: endMinute } = parseGameTimeToParts(endRaw);
+  const endMs = gameRegionWallClockToUtcMs(y, mo, d, endHour, endMinute);
+  if (!Number.isFinite(endMs) || endMs <= start) {
+    return start + DEFAULT_GAME_DURATION_MS;
+  }
+  return endMs;
+}
+
+export type AdminGameSchedulePhase = "ongoing" | "upcoming" | "past";
+
+/**
+ * Buckets a game for the admin games list using Toronto wall times.
+ * When start/end cannot be computed, falls back to calendar `date` vs today in {@link GAME_SCHEDULE_TIMEZONE}.
+ */
+export function getAdminGameSchedulePhase(
+  game: Pick<Game, "date" | "time" | "end_time">,
+  nowMs: number = Date.now()
+): AdminGameSchedulePhase {
+  const start = gameStartUtcMs(game);
+  const end = gameEndUtcMs(game);
+  if (start != null && end != null) {
+    if (nowMs < start) return "upcoming";
+    if (nowMs < end) return "ongoing";
+    return "past";
+  }
+
+  const today = todayIsoDateInGameScheduleZone(nowMs);
+  const d = game.date?.trim() ?? "";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return "upcoming";
+  if (d < today) return "past";
+  return "upcoming";
 }
 
 /**
