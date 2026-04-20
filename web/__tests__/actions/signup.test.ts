@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { signupForRun } from "@/actions/signup";
+import { signupForRun } from "@/server/actions/signup";
 import { createQueuedSupabaseMock } from "@/__tests__/helpers/mocks";
 
 const processWaitlistForGame = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));

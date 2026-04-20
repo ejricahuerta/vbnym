@@ -2,7 +2,7 @@ import "server-only";
 
 import { cookies } from "next/headers";
 
-import { getPlayerUpcomingGamesByEmail } from "@/lib/data/player-games-by-email";
+import { getPlayerUpcomingGamesByEmail } from "@/server/queries/player-games-by-email";
 import { verifyPlayerRecoverSessionToken } from "@/lib/player-magic-link";
 import { PLAYER_RECOVER_SESSION_COOKIE } from "@/lib/player-recover-cookie";
 import {
@@ -27,7 +27,7 @@ export async function getMyGamesAccessState(): Promise<{
   if (!session) {
     return { isAuthenticated: false, savedGameIds: [] };
   }
-  const games = await getPlayerUpcomingGamesByEmail(session.email);
+  const { games } = await getPlayerUpcomingGamesByEmail(session.email);
   const fromSession = games.map((g) => g.id);
   return {
     isAuthenticated: true,

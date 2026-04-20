@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { submitCommunityFeedback } from "@/actions/community-feedback";
+import { submitCommunityFeedback } from "@/server/actions/community-feedback";
 
 const createAdminClient = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => createAdminClient() }));

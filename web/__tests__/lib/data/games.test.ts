@@ -1,5 +1,6 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { getUpcomingGamesWithSignups, normalizeGame } from "@/lib/data/games";
+import { afterEach, describe, expect, it } from "vitest";
+import { normalizeGame } from "@/lib/normalize-game";
+import { getUpcomingGamesWithSignups } from "@/server/queries/games";
 import type { Game } from "@/types/vbnym";
 
 describe("normalizeGame", () => {

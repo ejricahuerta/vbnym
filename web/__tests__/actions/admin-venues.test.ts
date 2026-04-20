@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createVenue } from "@/actions/admin-venues";
+import { createVenue } from "@/server/actions/admin-venues";
 
 const createClient = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/supabase/server", () => ({ createClient: () => createClient() }));

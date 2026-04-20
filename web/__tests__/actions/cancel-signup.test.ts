@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { cancelSignup } from "@/actions/cancel-signup";
+import { cancelSignup } from "@/server/actions/cancel-signup";
 import { createQueuedSupabaseMock } from "@/__tests__/helpers/mocks";
 
 const processWaitlistForGame = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));

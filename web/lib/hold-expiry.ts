@@ -12,7 +12,7 @@ import {
   playerEmailLegalFooterText,
   playerPoliciesAbsoluteUrl,
 } from "@/lib/player-email-legal";
-import { normalizeGame } from "@/lib/data/games";
+import { normalizeGame } from "@/lib/normalize-game";
 
 function holdExpiredEmailHtml(opts: {
   name: string;

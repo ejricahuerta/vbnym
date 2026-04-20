@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { deleteGame } from "@/actions/admin-games";
+import { deleteGame } from "@/server/actions/admin-games";
 import { DeleteResourceDialog } from "@/components/admin/delete-resource-dialog";
 import { Button } from "@/components/ui/button";
 import {

@@ -1,6 +1,6 @@
 "use client";
 
-import { setSignupPaid } from "@/actions/admin-signups";
+import { setSignupPaid } from "@/server/actions/admin-signups";
 import { FormSubmitButton } from "@/components/ui/form-submit-button";
 
 type Props = {

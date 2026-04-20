@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeVenue } from "@/lib/data/venues";
+import { normalizeVenue } from "@/server/queries/venues";
 import type { Venue } from "@/types/vbnym";
 
 describe("normalizeVenue", () => {

@@ -13,8 +13,8 @@ import {
   Users,
   Zap,
 } from "lucide-react";
-import { signupForRun, type SignupResult } from "@/actions/signup";
-import { cancelSignup, type CancelResult } from "@/actions/cancel-signup";
+import { signupForRun, type SignupResult } from "@/server/actions/signup";
+import { cancelSignup, type CancelResult } from "@/server/actions/cancel-signup";
 import type { Game, Signup } from "@/types/vbnym";
 import { Button } from "@/components/ui/button";
 import { CopyTextButton } from "@/components/ui/copy-text-button";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { createGame } from "@/actions/admin-games";
+import { createGame } from "@/server/actions/admin-games";
 import { AdminGameFormFields } from "@/components/admin/admin-game-form-fields";
 import { Button } from "@/components/ui/button";
 import { SubmitSpinner } from "@/components/ui/submit-spinner";

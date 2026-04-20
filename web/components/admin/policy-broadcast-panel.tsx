@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { broadcastPlayerPolicyUpdate } from "@/actions/admin-policy-broadcast";
+import { broadcastPlayerPolicyUpdate } from "@/server/actions/admin-policy-broadcast";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";

@@ -3,6 +3,8 @@
 > Single source of truth for project structure, patterns, and conventions.  
 > Every file, component, and data-flow decision should be traceable back to this document.
 
+In this monorepo, the live Next.js application root is **`web/`** (not `src/` at repo root). Treat paths below as living under `web/` when you read `app/`, `server/`, `components/`, etc.
+
 ---
 
 ## Table of contents

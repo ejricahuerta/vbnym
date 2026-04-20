@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Loader2, Mail } from "lucide-react";
-import { requestPlayerMagicLink } from "@/actions/request-player-magic-link";
+import { requestPlayerMagicLink } from "@/server/actions/request-player-magic-link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,20 +19,23 @@ export function EmailGameLookup() {
   const [email, setEmail] = useState("");
   const [pending, startTransition] = useTransition();
   const [sent, setSent] = useState(false);
+  const [emailed, setEmailed] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setSent(false);
+    setEmailed(null);
     const fd = new FormData(e.currentTarget);
     startTransition(async () => {
       const res = await requestPlayerMagicLink(fd);
-      if (!res.ok && res.error) {
+      if (!res.ok) {
         setError(res.error);
         return;
       }
       setSent(true);
+      setEmailed(res.emailed);
     });
   }
 
@@ -83,16 +86,43 @@ export function EmailGameLookup() {
         </p>
       ) : null}
 
-      {sent ? (
+      {sent && emailed === true ? (
+        <div className="space-y-3">
+          <p
+            className={cn(
+              "rounded-xl border border-border/80 bg-muted/30 px-4 py-3 text-sm text-foreground"
+            )}
+            role="status"
+          >
+            We sent a sign-in link to this address. Check your inbox and spam; it expires in about{" "}
+            {LINK_MINUTES} minute{LINK_MINUTES === 1 ? "" : "s"}.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-xl"
+            disabled={pending || !email.includes("@")}
+            onClick={() => {
+              setSent(false);
+              setEmailed(null);
+              setError(null);
+            }}
+          >
+            Email sign-in link again
+          </Button>
+        </div>
+      ) : null}
+
+      {sent && emailed === false ? (
         <p
           className={cn(
             "rounded-xl border border-border/80 bg-muted/30 px-4 py-3 text-sm text-foreground"
           )}
           role="status"
         >
-          If that address has an upcoming game with us, check your inbox for the sign-in link. If
-          you do not see it, check spam. If you used a different email when you signed up, try that
-          address instead.
+          We did not send an email for this request. We only send links when this address matches an
+          active signup for a listed upcoming game. Try the exact email you used to sign up, or
+          contact the organizer if you need help.
         </p>
       ) : null}
     </div>

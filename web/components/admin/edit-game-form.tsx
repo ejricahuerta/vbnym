@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRef, useState } from "react";
-import { updateGame } from "@/actions/admin-games";
+import { updateGame } from "@/server/actions/admin-games";
 import { AdminGameFormFields } from "@/components/admin/admin-game-form-fields";
 import { Button } from "@/components/ui/button";
 import { SubmitSpinner } from "@/components/ui/submit-spinner";

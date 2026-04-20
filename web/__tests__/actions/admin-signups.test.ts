@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { setSignupPaid } from "@/actions/admin-signups";
+import { setSignupPaid } from "@/server/actions/admin-signups";
 
 const createClient = vi.hoisted(() => vi.fn());
 

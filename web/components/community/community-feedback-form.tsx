@@ -7,7 +7,7 @@ import {
   type CommunityCategory,
   type CommunityFeedbackResult,
 } from "@/lib/community-feedback";
-import { submitCommunityFeedback } from "@/actions/community-feedback";
+import { submitCommunityFeedback } from "@/server/actions/community-feedback";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

@@ -14,7 +14,7 @@ import {
   playerPoliciesAbsoluteUrl,
   publicAppOrigin,
 } from "@/lib/player-email-legal";
-import { normalizeGame } from "@/lib/data/games";
+import { normalizeGame } from "@/lib/normalize-game";
 
 const CODE_PATTERN = /\bNYM-[A-Z0-9]{4}-[A-Z0-9]{4}\b/g;
 const INTERAC_SENDER = "notify@payments.interac.ca";

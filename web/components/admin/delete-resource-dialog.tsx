@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ComponentProps } from "react";
+import { useState, type ComponentProps, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,10 +10,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { FormSubmitButton } from "@/components/ui/form-submit-button";
+import { SubmitSpinner } from "@/components/ui/submit-spinner";
+import { cn } from "@/lib/utils";
+import type { ActionResult } from "@/types/action-result";
 
 type Props = {
-  action: (formData: FormData) => Promise<void>;
+  action: (formData: FormData) => Promise<ActionResult<null>>;
   hiddenFields: Record<string, string>;
   /** Singular noun, lowercase in sentence (e.g. "game", "venue"). */
   resourceLabel: string;
@@ -35,6 +37,25 @@ export function DeleteResourceDialog({
   triggerClassName,
 }: Props) {
   const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+    setPending(true);
+    const fd = new FormData(e.currentTarget);
+    try {
+      const result = await action(fd);
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setOpen(false);
+    } finally {
+      setPending(false);
+    }
+  }
 
   return (
     <>
@@ -55,17 +76,35 @@ export function DeleteResourceDialog({
               {`"${resourceTitle}" will be permanently removed. This cannot be undone.`}
             </DialogDescription>
           </DialogHeader>
+          {error ? (
+            <p className="text-sm text-destructive" role="alert">
+              {error}
+            </p>
+          ) : null}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <form action={action} className="contents">
+            <form className="contents" onSubmit={onSubmit}>
               {Object.entries(hiddenFields).map(([name, value]) => (
                 <input key={name} type="hidden" name={name} value={value} />
               ))}
-              <FormSubmitButton type="submit" variant="destructive" pendingLabel="Deleting…">
-                Delete
-              </FormSubmitButton>
+              <Button
+                type="submit"
+                variant="destructive"
+                disabled={pending}
+                className={cn(pending && "gap-2")}
+                aria-busy={pending}
+              >
+                {pending ? (
+                  <>
+                    <SubmitSpinner />
+                    Deleting…
+                  </>
+                ) : (
+                  "Delete"
+                )}
+              </Button>
             </form>
           </DialogFooter>
         </DialogContent>

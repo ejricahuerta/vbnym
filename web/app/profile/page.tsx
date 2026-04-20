@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { ProfileRedirectPage } from "@/components/features/profile-redirect/ProfileRedirectPage";
 
-export default async function ProfilePage() {
-  redirect("/app/my-games");
+export default function Page() {
+  return <ProfileRedirectPage />;
 }

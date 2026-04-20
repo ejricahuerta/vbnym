@@ -259,8 +259,8 @@ export function GamesHome({
               : "max-w-3xl px-4 sm:px-6 lg:max-w-4xl xl:max-w-5xl"
           )}
         >
-          {/* Tonight — above filters (hidden when “Tonight” pill is on; list then carries those rows). */}
-          {view === "list" && dateFilter !== "tonight" ? (
+          {/* Tonight — above filters (only when there are runs today; hidden when “Tonight” pill is on). */}
+          {showTonightSpotlight ? (
             <section aria-labelledby="tonight-heading" className="space-y-2">
               <div className="flex items-baseline justify-between gap-3">
                 <h2
@@ -269,34 +269,26 @@ export function GamesHome({
                 >
                   Tonight
                 </h2>
-                {tonightGames.length > 0 ? (
-                  <button
-                    type="button"
-                    onClick={() => setDateFilter("tonight")}
-                    className="inline-flex shrink-0 items-center gap-0.5 text-sm font-semibold text-accent hover:underline"
-                  >
-                    See all
-                    <ArrowRight className="size-4" aria-hidden />
-                  </button>
-                ) : null}
+                <button
+                  type="button"
+                  onClick={() => setDateFilter("tonight")}
+                  className="inline-flex shrink-0 items-center gap-0.5 text-sm font-semibold text-accent hover:underline"
+                >
+                  See all
+                  <ArrowRight className="size-4" aria-hidden />
+                </button>
               </div>
-              {tonightGames.length > 0 ? (
-                <ul className="flex flex-col gap-2">
-                  {tonightGames.map((game) => (
-                    <li key={game.id}>
-                      <TonightCard
-                        game={game}
-                        signups={signupsByGameId[game.id] ?? []}
-                        isSignedUp={myGameIds.includes(game.id)}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="rounded-lg border border-dashed border-border/80 bg-muted/20 px-3 py-3 text-sm text-muted-foreground">
-                  No games scheduled for tonight{query.trim() ? " that match your search" : ""}.
-                </p>
-              )}
+              <ul className="flex flex-col gap-2">
+                {tonightGames.map((game) => (
+                  <li key={game.id}>
+                    <TonightCard
+                      game={game}
+                      signups={signupsByGameId[game.id] ?? []}
+                      isSignedUp={myGameIds.includes(game.id)}
+                    />
+                  </li>
+                ))}
+              </ul>
             </section>
           ) : null}
 

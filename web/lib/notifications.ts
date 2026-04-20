@@ -21,8 +21,9 @@ export async function sendTransactionalEmail(input: SendEmailInput): Promise<voi
 export async function sendTransactionalEmailResult(
   input: SendEmailInput
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const resendKey = process.env.RESEND_API_KEY;
-  const from = process.env.RESEND_FROM_EMAIL ?? "NYM Volleyball <nymvb@ednsy.com>";
+  const resendKey = process.env.RESEND_API_KEY?.trim();
+  const from =
+    process.env.RESEND_FROM_EMAIL?.trim() ?? "NYM Volleyball <nymvb@ednsy.com>";
   if (!resendKey) {
     return { ok: false, error: "Email is not configured (missing RESEND_API_KEY)." };
   }

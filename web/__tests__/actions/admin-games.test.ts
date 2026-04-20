@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createGame, deleteGame, updateGame } from "@/actions/admin-games";
+import { createGame, deleteGame } from "@/server/actions/admin-games";
 
 const createClient = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/supabase/server", () => ({ createClient: () => createClient() }));
@@ -35,7 +35,8 @@ describe("admin games", () => {
     createClient.mockResolvedValue({ auth, from: () => ({ delete: () => ({ eq: del }) }) });
     const f = new FormData();
     f.append("id", "game-1");
-    await deleteGame(f);
+    const r = await deleteGame(f);
+    expect(r.ok).toBe(false);
     expect(del).not.toHaveBeenCalled();
   });
 });

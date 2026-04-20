@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createVenue } from "@/actions/admin-venues";
+import { createVenue } from "@/server/actions/admin-venues";
 import { Button } from "@/components/ui/button";
 import { SubmitSpinner } from "@/components/ui/submit-spinner";
 import { Card } from "@/components/ui/card";

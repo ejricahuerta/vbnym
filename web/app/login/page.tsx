@@ -1,6 +1,5 @@
-import { redirect } from "next/navigation";
+import { LegacyLoginRedirectPage } from "@/components/features/legacy-login/LegacyLoginRedirectPage";
 
-/** Legacy player magic-link URL; player login was removed. */
-export default function LoginPageRedirect() {
-  redirect("/");
+export default function Page() {
+  return <LegacyLoginRedirectPage />;
 }

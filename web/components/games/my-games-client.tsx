@@ -16,7 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { clearPlayerRecoverSession } from "@/actions/clear-player-recover-session";
+import { clearPlayerRecoverSession } from "@/server/actions/clear-player-recover-session";
 import { clearPlayerBrowserData } from "@/lib/client/game-cookies";
 
 export function MyGamesClient({

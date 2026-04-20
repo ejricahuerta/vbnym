@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { PlayerLoginRedirectPage } from "@/components/features/player-login/PlayerLoginRedirectPage";
 
-export default function PlayerLoginPage() {
-  redirect("/");
+export default function Page() {
+  return <PlayerLoginRedirectPage />;
 }

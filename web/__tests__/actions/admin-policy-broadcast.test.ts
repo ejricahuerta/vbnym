@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { broadcastPlayerPolicyUpdate } from "@/actions/admin-policy-broadcast";
+import { broadcastPlayerPolicyUpdate } from "@/server/actions/admin-policy-broadcast";
 
 describe("broadcastPlayerPolicyUpdate", () => {
   const prev = process.env.RESEND_API_KEY;
