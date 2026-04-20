@@ -21,18 +21,79 @@ function organizerDisplayName(user: User): string {
   return local || "Organizer";
 }
 
-async function insertOrganizerSignupIfMissing(
+type OrganizerSignupRow = {
+  id: string;
+  paid: boolean;
+  payment_code_expires_at: string | null;
+};
+
+/** Matches public roster visibility in `getGameWithSignups` (`isActiveSignup`). */
+function signupRowIsPublicActive(
+  r: Pick<OrganizerSignupRow, "paid" | "payment_code_expires_at">
+): boolean {
+  if (r.paid) return true;
+  if (!r.payment_code_expires_at) return true;
+  const t = new Date(r.payment_code_expires_at).getTime();
+  return !Number.isFinite(t) || t > Date.now();
+}
+
+/**
+ * Ensures the logged-in organizer has a visible signup for this game when they opt in.
+ * If a row exists but is hidden from the public roster (expired unpaid hold), upgrade it.
+ */
+async function ensureOrganizerSignupForGame(
   supabase: ServerSupabase,
   opts: { gameId: string; email: string; name: string }
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const email = opts.email.trim().toLowerCase();
-  const { data: existing } = await supabase
+  const { data: rows, error: selectError } = await supabase
     .from("signups")
-    .select("id")
+    .select("id, paid, payment_code_expires_at")
     .eq("game_id", opts.gameId)
     .eq("email", email)
-    .maybeSingle();
-  if (existing) return { ok: true };
+    .order("created_at", { ascending: false })
+    .limit(1);
+  if (selectError) return { ok: false, error: selectError.message };
+  const existing = rows?.[0] as OrganizerSignupRow | undefined;
+
+  const organizerUpdate = {
+    name: opts.name,
+    paid: true,
+    payment_code: null as string | null,
+    payment_code_expires_at: null as string | null,
+    waiver_accepted: true,
+  };
+
+  if (existing) {
+    if (signupRowIsPublicActive(existing)) {
+      if (existing.paid) {
+        const { error } = await supabase
+          .from("signups")
+          .update({ name: opts.name, waiver_accepted: true })
+          .eq("id", existing.id);
+        if (error) return { ok: false, error: error.message };
+        return { ok: true };
+      }
+      const { error } = await supabase
+        .from("signups")
+        .update({
+          ...organizerUpdate,
+          friends: [],
+        })
+        .eq("id", existing.id);
+      if (error) return { ok: false, error: error.message };
+      return { ok: true };
+    }
+    const { error } = await supabase
+      .from("signups")
+      .update({
+        ...organizerUpdate,
+        friends: [],
+      })
+      .eq("id", existing.id);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  }
 
   const { error } = await supabase.from("signups").insert({
     game_id: opts.gameId,
@@ -85,7 +146,7 @@ export async function createGame(
   if (!gameId) return { ok: false, error: "Game was not created." };
 
   if (parsed.data.admin_will_play && user.email) {
-    const added = await insertOrganizerSignupIfMissing(supabase, {
+    const added = await ensureOrganizerSignupForGame(supabase, {
       gameId,
       email: user.email,
       name: organizerDisplayName(user),
@@ -104,6 +165,7 @@ export async function createGame(
   revalidatePath("/app");
   if (parsed.data.admin_will_play) {
     revalidatePath(`/app/games/${gameId}`);
+    revalidatePath(`/games/${gameId}`);
   }
   return { ok: true, data: { id: gameId } };
 }
@@ -144,7 +206,7 @@ export async function updateGame(
   if (error) return { ok: false, error: error.message };
 
   if (parsed.data.admin_will_play && user.email) {
-    const added = await insertOrganizerSignupIfMissing(supabase, {
+    const added = await ensureOrganizerSignupForGame(supabase, {
       gameId: parsed.data.id,
       email: user.email,
       name: organizerDisplayName(user),
@@ -161,6 +223,7 @@ export async function updateGame(
   revalidatePath("/admin/signups");
   revalidatePath(`/admin/games/${parsed.data.id}/edit`);
   revalidatePath(`/app/games/${parsed.data.id}`);
+  revalidatePath(`/games/${parsed.data.id}`);
   revalidatePath("/", "page");
   revalidatePath("/app");
   return { ok: true, data: { id: parsed.data.id } };
