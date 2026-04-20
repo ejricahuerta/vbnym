@@ -10,6 +10,21 @@ vi.mock("@supabase/ssr", () => ({
 }));
 
 describe("proxy", () => {
+  it("redirects Supabase PKCE code from / to /auth/callback", async () => {
+    mockGetUser.mockResolvedValue({ data: { user: null } });
+    vi.resetModules();
+    const { proxy } = await import("@/proxy");
+    const code = "bca7f969-3075-47cb-8c4d-d99d94fd56ee";
+    const res = await proxy(
+      new NextRequest(new URL(`http://localhost:3000/?code=${code}&state=x`))
+    );
+    expect(res.status).toBe(307);
+    const loc = res.headers.get("location");
+    expect(loc).toContain("/auth/callback");
+    expect(loc).toContain(`code=${code}`);
+    expect(loc).toContain("state=x");
+  });
+
   it("passes through when Supabase env missing", async () => {
     const prevUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const prevKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

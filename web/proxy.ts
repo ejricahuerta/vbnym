@@ -5,7 +5,27 @@ import { NextResponse } from "next/server";
 import { isAuthorizedAdmin } from "./lib/auth";
 import { publicOriginFromRequest } from "./lib/request-public-origin";
 
+/** Supabase PKCE often lands on `/` when Dashboard Site URL is wrong (e.g. localhost). */
+function isLikelySupabasePkceCode(value: string): boolean {
+  return value.length >= 20 && value.length <= 512 && /^[A-Za-z0-9\-._~]+$/.test(value);
+}
+
 export async function proxy(request: NextRequest) {
+  const path = request.nextUrl.pathname;
+  const strayCode = request.nextUrl.searchParams.get("code");
+  if (
+    path === "/" &&
+    strayCode &&
+    isLikelySupabasePkceCode(strayCode)
+  ) {
+    const publicOrigin = publicOriginFromRequest(request);
+    const dest = new URL("/auth/callback", publicOrigin);
+    request.nextUrl.searchParams.forEach((value, key) => {
+      dest.searchParams.set(key, value);
+    });
+    return NextResponse.redirect(dest);
+  }
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !anon) {
@@ -40,7 +60,6 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await auth.getUser();
 
-  const path = request.nextUrl.pathname;
   const publicOrigin = publicOriginFromRequest(request);
   if (path.startsWith("/admin") && !path.startsWith("/admin/login")) {
     if (!isAuthorizedAdmin(user)) {

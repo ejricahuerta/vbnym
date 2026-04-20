@@ -5,9 +5,12 @@ import { publicOriginFromRequest } from "@/lib/request-public-origin";
 
 /**
  * Supabase OAuth (e.g. Google) redirects here with ?code=…
- * Add to Supabase → Authentication → URL configuration → Redirect URLs:
- *   http://localhost:3000/auth/callback
+ * Add to Supabase → Authentication → URL configuration:
+ * - **Site URL**: production origin (not localhost), e.g. https://vbnym.ednsy.com
+ * - **Redirect URLs**: http://localhost:3000/auth/callback and
  *   https://<your-production-domain>/auth/callback
+ * If Site URL is still localhost, Supabase may send `?code=` to `/` — `proxy.ts`
+ * forwards that to this route.
  */
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
