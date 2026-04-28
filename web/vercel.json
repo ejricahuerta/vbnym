@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/gmail-sync",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/gmail-reauth-reminder",
+      "schedule": "0 12 * * *"
+    }
+  ]
+}
