@@ -23,10 +23,10 @@ export function CancellationPolicyDialog({ open, onOpenChange }: Props) {
       >
         <DialogHeader className="shrink-0 border-b px-5 py-4 pr-14 text-left sm:px-6">
           <DialogTitle className="text-base font-semibold leading-snug sm:text-lg">
-            Cancellation, payment timing & refunds
+            Cancellation, payment timing and refunds
           </DialogTitle>
           <DialogDescription className="text-left text-xs sm:text-sm">
-            How holds, waitlist invites, and cancellations work for NYM drop-in games.
+            How holds, waitlist invites, and cancellations work for 6IX BACK drop-in games.
           </DialogDescription>
         </DialogHeader>
 

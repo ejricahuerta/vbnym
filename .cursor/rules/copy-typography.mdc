@@ -1,0 +1,55 @@
+---
+description: Copy → use → not em dash; use "and" not "&" (exceptions for code and entities)
+alwaysApply: true
+---
+
+# Copy typography
+
+Two conventions for visible copy and prose in this repo.
+
+---
+
+## Em dash → rightwards arrow
+
+Do **not** use the **em dash** (`—`, U+2014). Use the **rightwards arrow** (`→`, U+2192) for the same visual break, lists, and “x then y” phrasing.
+
+| Use | Do not use |
+|-----|------------|
+| `→` (U+2192) | `—` (U+2014) |
+
+```tsx
+// ❌
+<p>We don&apos;t take a cut — hosts receive Interac.</p>
+
+// ✅
+<p>We don&apos;t take a cut → hosts receive Interac.</p>
+```
+
+**Hyphen** (`-`) and **en dash** (`–`) are out of scope unless you choose to normalize them separately.
+
+---
+
+## Ampersand → **and**
+
+In **user-facing strings** (headlines, body copy, labels, button text, emails, aria where it’s sentence-like), write the word **and**. Do **not** use **`&`** as a substitute for “and”.
+
+```tsx
+// ❌
+<span>Toronto & GTA</span>
+
+// ✅
+<span>Toronto and GTA</span>
+```
+
+### Do not “fix” these
+
+Leave **`&`** as-is where it is syntax or escape machinery, not English “and”:
+
+- JavaScript/logic: `&&`, `&` in bitwise ops
+- URLs, query strings, form names
+- HTML/XML **named character references**: `&amp;`, `&apos;`, `&quot;`, `&nbsp;`, numeric `&#…;`
+- JSX **only when** the character `&` must appear literally and the framework/docs require an entity (prefer rewriting copy to **and** so entities stay rare)
+
+When editing existing UI text, replace rhetorical **`&`** with **and** unless one of the exceptions applies.
+
+When editing existing text, replace **`—`** with **`→`** unless the file is third-party, generated, or must stay verbatim.

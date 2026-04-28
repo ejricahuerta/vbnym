@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Cookie, X } from "lucide-react";
 import { getCookieConsent, setCookieConsent } from "@/lib/client/game-cookies";
@@ -49,14 +49,17 @@ function writeUiDismissed() {
 
 export function CookieConsentPopup() {
   const [mounted, setMounted] = useState(false);
-  const [shouldShow, setShouldShow] = useState(false);
+  const [shouldShow, setShouldShow] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const consent = getCookieConsent();
+    return consent === "unset" && !readUiDismissed();
+  });
   const [visible, setVisible] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
 
-  useLayoutEffect(() => {
-    const consent = getCookieConsent();
-    const needsConsent = consent === "unset" && !readUiDismissed();
-    setShouldShow(needsConsent);
+  useEffect(() => {
+    // Mark hydration completion for portal rendering.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 

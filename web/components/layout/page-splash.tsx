@@ -61,9 +61,9 @@ export function PageSplash() {
         paddingBottom: "env(safe-area-inset-bottom)",
       }}
     >
-      <div className="flex size-16 items-center justify-center overflow-hidden rounded-2xl bg-white p-2 shadow-lg ring-1 ring-black/10 motion-safe:animate-pulse">
+      <div className="flex size-16 items-center justify-center overflow-hidden rounded-lg border-2 border-border bg-card p-2 shadow-[3px_3px_0_var(--ink)] motion-safe:animate-pulse">
         <Image
-          src="/nym-logo.png"
+          src="/6ix-back-logo.svg"
           alt=""
           width={56}
           height={56}
@@ -72,7 +72,7 @@ export function PageSplash() {
         />
       </div>
       <div className="text-center font-heading text-lg font-semibold tracking-tight sm:text-xl">
-        NYM Volleyball
+        6IX BACK Volleyball
       </div>
       <Loader2
         className="size-6 text-white/65 motion-safe:animate-spin motion-reduce:animate-none"

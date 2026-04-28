@@ -43,10 +43,12 @@ const LIST_PHASE_TICKS = SAMPLE_NAMES.length * LIST_BUBBLE_TICKS;
 const MAX_TICK = INTRO_HOLD_TICKS + LIST_PHASE_TICKS + LOOP_PAUSE_TICKS;
 
 function useReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(false);
+  const [reduced, setReduced] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  });
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReduced(mq.matches);
     const on = () => setReduced(mq.matches);
     mq.addEventListener("change", on);
     return () => mq.removeEventListener("change", on);
@@ -125,15 +127,13 @@ export function WhatsAppRosterMock() {
   }, []);
 
   useEffect(() => {
-    if (reduced) {
-      setTick(MAX_TICK);
-      return;
-    }
+    if (reduced) return;
     const id = window.setInterval(advance, TICK_MS);
     return () => window.clearInterval(id);
   }, [advance, reduced]);
 
-  const { listBubbles } = deriveFromTick(tick);
+  const renderTick = reduced ? MAX_TICK : tick;
+  const { listBubbles } = deriveFromTick(renderTick);
 
   useLayoutEffect(() => {
     const el = scrollRef.current;
@@ -146,7 +146,7 @@ export function WhatsAppRosterMock() {
       className="mx-auto h-[600px] w-[min(100%,280px)] shrink-0 select-none sm:h-[640px] sm:w-[300px]"
       aria-hidden
     >
-      {/* Phone chassis — fixed iPhone-style portrait footprint */}
+      {/* Phone chassis → fixed iPhone-style portrait footprint */}
       <div className="relative flex h-full flex-col rounded-[2.65rem] border border-white/12 bg-gradient-to-b from-[#4a4a4f] via-[#2e2e31] to-[#1a1a1c] p-2.5 shadow-[0_28px_56px_-12px_rgba(0,0,0,0.55)] ring-1 ring-black/60 sm:rounded-[2.85rem] sm:p-3">
         <div
           className="pointer-events-none absolute left-1/2 top-2 z-10 h-1 w-14 -translate-x-1/2 rounded-full bg-black/45 sm:top-2.5 sm:w-16"
@@ -161,7 +161,7 @@ export function WhatsAppRosterMock() {
           aria-hidden
         />
 
-        {/* Glass screen — fixed height; app fills below status bar */}
+        {/* Glass screen → fixed height; app fills below status bar */}
         <div className="mt-3 flex min-h-0 flex-1 flex-col overflow-hidden rounded-[1.9rem] border border-black/50 bg-black shadow-[inset_0_0_0_1px_rgba(255,255,255,0.07)] sm:mt-3.5 sm:rounded-[2.05rem]">
           {/* System status (iOS-style) */}
           <div className="relative flex h-11 shrink-0 items-end justify-between bg-black px-4 pb-1.5 pt-0.5 text-[12px] font-semibold tabular-nums text-white sm:h-12 sm:px-5">
@@ -182,7 +182,7 @@ export function WhatsAppRosterMock() {
               <ChevronLeft className="size-5 shrink-0 text-[#007aff]" strokeWidth={2.5} aria-hidden />
               <div className="size-9 shrink-0 rounded-full bg-[#dfe5e7]" />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[15px] font-semibold leading-tight text-black">NYM Drop-in</p>
+                <p className="truncate text-[15px] font-semibold leading-tight text-black">6IX BACK Drop-in</p>
                 <p className="text-[12px] leading-tight text-[#34b759]">Online</p>
               </div>
               <Video className="size-5 shrink-0 text-[#007aff]" strokeWidth={2} aria-hidden />

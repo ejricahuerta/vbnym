@@ -51,7 +51,7 @@ function cancellationEmailHtml(opts: {
     <div style="margin:0;padding:24px;background:#f8fafc;font-family:Arial,sans-serif;color:#131b2e">
       <div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden">
         <div style="padding:18px 22px;background:#0f274f;color:#ffffff">
-          <div style="font-size:18px;font-weight:700;">North York | Markham Volleyball</div>
+          <div style="font-size:18px;font-weight:700;">6IX BACK Volleyball</div>
           <div style="margin-top:3px;font-size:12px;opacity:0.85;letter-spacing:1px;text-transform:uppercase">Cancellation confirmed</div>
         </div>
         <div style="padding:24px 22px">
@@ -170,7 +170,7 @@ export async function cancelSignup(formData: FormData): Promise<CancelResult> {
   try {
     await sendTransactionalEmail({
       to: email,
-      subject: `NYM Volleyball — cancellation confirmed for ${game.location}`,
+      subject: `6IX BACK Volleyball → cancellation confirmed for ${game.location}`,
       html: cancellationEmailHtml({ name: signup.name, game, wasPaid, policiesUrl }),
       text: cancellationEmailText({ name: signup.name, game, wasPaid, policiesUrl }),
     });

@@ -50,7 +50,7 @@ function CommunityFeedbackFormInner({ onSendAnother }: { onSendAnother: () => vo
             className="rounded-xl border border-accent/30 bg-accent/10 px-4 py-4 text-sm text-foreground"
             role="status"
           >
-            <p className="font-semibold text-foreground">Thanks — we received your message.</p>
+            <p className="font-semibold text-foreground">Thanks → we received your message.</p>
             <p className="mt-2 text-muted-foreground">
               Volunteers read every submission. If a reply is needed, we will use the email you provided.
             </p>

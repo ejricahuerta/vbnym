@@ -1,5 +1,5 @@
-import { AppSchedulePage } from "@/components/features/app-schedule/AppSchedulePage";
+import { BrowseReferencePage } from "@/components/features/app-schedule/BrowseReferencePage";
 
 export default function Page() {
-  return <AppSchedulePage />;
+  return <BrowseReferencePage />;
 }

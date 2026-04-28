@@ -1,6 +1,6 @@
-import { GameDetailPage } from "@/components/features/game-detail/GameDetailPage";
+import { GameDetailReferencePage } from "@/components/features/game-detail/GameDetailReferencePage";
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return <GameDetailPage id={id} />;
+  return <GameDetailReferencePage id={id} />;
 }

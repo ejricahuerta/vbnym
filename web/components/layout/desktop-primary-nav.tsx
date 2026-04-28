@@ -3,52 +3,52 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 
-function navButtonClass(active: boolean) {
+function navLinkClass(active: boolean) {
   return cn(
-    "h-auto rounded-full px-3 py-2 text-sm font-medium shadow-none hover:bg-primary-foreground/10 hover:text-primary-foreground",
+    "px-1 text-[13px] font-black uppercase tracking-[0.08em] text-[var(--ink)] transition-opacity",
     active
-      ? "bg-accent/20 text-accent font-semibold"
-      : "text-primary-foreground/80"
+      ? "opacity-100"
+      : "opacity-80 hover:opacity-100"
   );
 }
 
 export function DesktopPrimaryNav() {
   const pathname = usePathname();
-  const linkFor = (anchor: string) => (pathname === "/" ? anchor : `/${anchor}`);
-  const myGamesActive = pathname === "/app/my-games";
+  const isBrowse = pathname === "/app" || pathname.startsWith("/app/games/");
+  const isHost = pathname === "/host";
+  const isAdmin = pathname.startsWith("/admin");
 
   return (
-    <nav
-      className="hidden min-w-0 flex-1 items-center justify-end gap-3 md:flex"
-      aria-label="Primary navigation"
-    >
-      <div className="flex min-w-0 flex-wrap items-center justify-end gap-0.5">
-        <Button variant="ghost" size="sm" asChild className={navButtonClass(false)}>
-          <Link href={linkFor("#how-it-works")}>How it works</Link>
-        </Button>
-        <Button variant="ghost" size="sm" asChild className={navButtonClass(false)}>
-          <Link href={linkFor("#venue")}>Venues</Link>
-        </Button>
-        <Button variant="ghost" size="sm" asChild className={navButtonClass(false)}>
-          <Link href={linkFor("#about")}>About</Link>
-        </Button>
-        <Button variant="ghost" size="sm" asChild className={navButtonClass(pathname === "/community")}>
-          <Link href="/community" aria-current={pathname === "/community" ? "page" : undefined}>
-            Community
-          </Link>
-        </Button>
-      </div>
-      <Button
-        asChild
-        size="sm"
-        className="h-9 shrink-0 rounded-full bg-accent px-4 text-sm font-semibold text-accent-foreground shadow-sm hover:bg-accent/90 sm:h-10 sm:px-5"
+    <div className="hidden min-w-0 flex-1 items-center justify-between gap-6 md:flex">
+      <nav
+        className="mx-auto flex min-w-0 items-center gap-8 lg:gap-10"
+        aria-label="Primary navigation"
       >
-        <Link href="/app/my-games" aria-current={myGamesActive ? "page" : undefined}>
-          My Games
+        <Link href="/app" className={navLinkClass(isBrowse)} aria-current={isBrowse ? "page" : undefined}>
+          Browse
         </Link>
-      </Button>
-    </nav>
+        <Link href="/host" className={navLinkClass(isHost)} aria-current={isHost ? "page" : undefined}>
+          Host
+        </Link>
+        <Link href="/admin" className={navLinkClass(isAdmin)} aria-current={isAdmin ? "page" : undefined}>
+          Admin
+        </Link>
+      </nav>
+      <div className="flex items-center gap-2">
+        <Link
+          href="/login"
+          className="inline-flex h-9 items-center rounded-[10px] border-2 border-[var(--ink)] bg-[var(--paper)] px-4 text-[12px] font-black uppercase tracking-[0.08em] text-[var(--ink)]"
+        >
+          Sign In
+        </Link>
+        <Link
+          href="/app"
+          className="inline-flex h-9 items-center rounded-[10px] border-2 border-[var(--ink)] bg-accent px-4 text-[12px] font-black uppercase tracking-[0.08em] text-[var(--ink)]"
+        >
+          Find A Game
+        </Link>
+      </div>
+    </div>
   );
 }

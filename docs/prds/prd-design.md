@@ -1,5 +1,5 @@
 web application/stitch/projects/15606271158987994423/screens/70f298251a2a47adba0bae194d4bf9ea
-# NYM Volleyball — Product Requirements Document (PRD)
+# NYM Volleyball → Product Requirements Document (PRD)
 
 **Project Name:** NYM Volleyball (The Kinetic Court)
 **Status:** Canonical Reference

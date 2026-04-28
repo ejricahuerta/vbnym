@@ -37,7 +37,7 @@ node scripts/mock-payment-sync-cron.mjs
 
 ### Optional override
 
-`PAYMENT_SYNC_ENDPOINT` — full URL if not using the default `http://localhost:3000/api/admin/payments/sync`.
+`PAYMENT_SYNC_ENDPOINT` → full URL if not using the default `http://localhost:3000/api/admin/payments/sync`.
 
 ## Mock payment sync every minute (local loop)
 

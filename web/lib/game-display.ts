@@ -211,7 +211,7 @@ export function formatGameCardTimeRail(
   const startNorm = gameTimeToTimeInputValue(game.time);
   if (!startNorm) {
     const t = String(game.time ?? "").trim();
-    return { primary: t || "—", secondary: "" };
+    return { primary: t || "→", secondary: "" };
   }
   const start = parseGameTimeToParts(game.time);
   const clock = clockHourMinuteOnly(start.hour, start.minute);
@@ -224,7 +224,7 @@ export function formatGameCardTimeRail(
 }
 
 /**
- * Uppercase headline strip for the top of a game card — when it is, court, venue cue (comma before split).
+ * Uppercase headline strip for the top of a game card → when it is, court, venue cue (comma before split).
  */
 export function formatGameCardTonightStrip(game: Pick<Game, "date" | "court" | "location">): string {
   const date = formatGameDateParts(game.date);
@@ -318,7 +318,7 @@ export function buildGoogleCalendarUrl(
 
   const params = new URLSearchParams({
     action: "TEMPLATE",
-    text: `Volleyball — ${game.location}`,
+    text: `Volleyball → ${game.location}`,
     dates: `${startStr}/${endStr}`,
     ctz: "America/Toronto",
     location: copyableVenueLineForClipboard(game.location, game.address),

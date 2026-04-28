@@ -28,5 +28,5 @@ export function generatePaymentCode(
   hmac.update(payload);
   const hash = hmac.digest();
   const code = toBase32(hash.subarray(0, 5), 8);
-  return `NYM-${code.slice(0, 4)}-${code.slice(4, 8)}`;
+  return `6IX-${code.slice(0, 4)}-${code.slice(4, 8)}`;
 }

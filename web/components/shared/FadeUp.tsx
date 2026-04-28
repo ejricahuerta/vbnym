@@ -14,18 +14,15 @@ type FadeUpProps = {
 
 export function FadeUp({ children, className, delayMs = 0, once = true }: FadeUpProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
-  const [reduceMotion, setReduceMotion] = useState(false);
+  const prefersReducedMotion =
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const [reduceMotion] = useState(prefersReducedMotion);
+  const [visible, setVisible] = useState(prefersReducedMotion);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    if (mq.matches) {
-      setReduceMotion(true);
-      setVisible(true);
-      return;
-    }
+    if (reduceMotion) return;
 
     const el = ref.current;
     if (!el) return;
@@ -45,7 +42,7 @@ export function FadeUp({ children, className, delayMs = 0, once = true }: FadeUp
 
     obs.observe(el);
     return () => obs.disconnect();
-  }, [once]);
+  }, [once, reduceMotion]);
 
   return (
     <div

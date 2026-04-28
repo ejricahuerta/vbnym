@@ -9,6 +9,7 @@ vi.mock("googleapis", () => {
     setCredentials = vi.fn();
     generateAuthUrl = vi.fn(() => "https://oauth");
     getToken = vi.fn();
+    getAccessToken = vi.fn().mockResolvedValue({ token: "access" });
   }
   return {
   google: {
@@ -32,6 +33,11 @@ vi.mock("@/lib/notifications", () => ({
   sendTransactionalEmail: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("@/lib/gmail-reauth-reminder", () => ({
+  markGameGmailReauthRequiredAndNotify: vi.fn().mockResolvedValue(undefined),
+  markUniversalGmailReauthRequiredAndNotify: vi.fn().mockResolvedValue(undefined),
+}));
+
 function thenable<T>(data: T, error: { message: string } | null = null) {
   const result = { data, error };
   const self = {
@@ -49,11 +55,14 @@ function thenable<T>(data: T, error: { message: string } | null = null) {
   return self;
 }
 
-describe("extractCodes & parseSenderEmail", () => {
-  it("extractCodes finds NYM codes and dedupes", async () => {
+describe("extractCodes and parseSenderEmail", () => {
+  it("extractCodes finds NYM and 6IX codes and dedupes", async () => {
     const { extractCodes } = await import("@/lib/gmail-sync");
-    expect(extractCodes("Pay NYM-AB12-CD34 today")).toEqual(["NYM-AB12-CD34"]);
-    expect(extractCodes("nym-ab12-cd34 and NYM-AB12-CD34")).toEqual(["NYM-AB12-CD34"]);
+    expect(extractCodes("Pay NYM-AB12-CD34 and 6IX-ZZ99-WW88 today")).toEqual([
+      "NYM-AB12-CD34",
+      "6IX-ZZ99-WW88",
+    ]);
+    expect(extractCodes("6ix-ab12-cd34 and 6IX-AB12-CD34")).toEqual(["6IX-AB12-CD34"]);
     expect(extractCodes("no codes")).toEqual([]);
   });
 
@@ -85,32 +94,66 @@ describe("syncPaidSignupsFromGmail", () => {
     });
   });
 
-  it("throws when Gmail not connected", async () => {
+  it("returns 0 when no pending signups", async () => {
+    const adminFrom = vi.fn((table: string) => {
+      if (table === "signups") {
+        return {
+          select: () => ({
+            eq: () => ({
+              not: () => Promise.resolve({ data: [], error: null }),
+            }),
+          }),
+        };
+      }
+      if (table === "admin_settings") {
+        return {
+          update: () => ({
+            eq: vi.fn().mockResolvedValue({ error: null }),
+          }),
+        };
+      }
+      throw new Error(`unexpected ${table}`);
+    });
     const { syncPaidSignupsFromGmail } = await import("@/lib/gmail-sync");
-    const admin = {
-      from: vi.fn(() =>
-        thenable({ gmail_refresh_token: null, gmail_connected_email: null })
-      ),
-    };
-    await expect(syncPaidSignupsFromGmail(admin as never, "http://localhost")).rejects.toThrow(
-      "Gmail is not connected"
-    );
+    const n = await syncPaidSignupsFromGmail({ from: adminFrom } as never, "http://localhost");
+    expect(n).toBe(0);
   });
 
-  it("returns 0 and updates settings when no Gmail hits", async () => {
-    listMock.mockResolvedValueOnce({ data: { messages: [] } });
-    const { syncPaidSignupsFromGmail } = await import("@/lib/gmail-sync");
+  it("returns 0 when pending signups exist but no usable Gmail inbox", async () => {
     const updateChain: Record<string, unknown> = {};
     updateChain.eq = vi.fn(() => updateChain);
     updateChain.then = (fn: (r: { data: null; error: null }) => unknown) =>
       Promise.resolve({ data: null, error: null }).then(fn);
+    const pending = [
+      {
+        id: "su-1",
+        game_id: "g1",
+        email: "p@example.com",
+        paid: false,
+        payment_code: "NYM-AA11-BB22",
+      },
+    ];
     const adminFrom = vi.fn((table: string) => {
+      if (table === "signups") {
+        return {
+          select: () => ({
+            eq: () => ({
+              not: () => Promise.resolve({ data: pending, error: null }),
+            }),
+          }),
+        };
+      }
       if (table === "admin_settings") {
         return {
           select: () => ({
             eq: () => ({
-              single: async () => ({
-                data: { gmail_refresh_token: "rt", gmail_connected_email: "a@b.com" },
+              maybeSingle: async () => ({
+                data: {
+                  gmail_refresh_token: null,
+                  gmail_connected_email: null,
+                  gmail_assumed_expires_at: null,
+                  gmail_reauth_required: false,
+                },
                 error: null,
               }),
             }),
@@ -118,12 +161,76 @@ describe("syncPaidSignupsFromGmail", () => {
           update: () => updateChain,
         };
       }
-      return thenable(null);
+      if (table === "game_email_sync_config") {
+        return {
+          select: () => ({
+            in: () => Promise.resolve({ data: [], error: null }),
+          }),
+        };
+      }
+      throw new Error(`unexpected ${table}`);
+    });
+    const { syncPaidSignupsFromGmail } = await import("@/lib/gmail-sync");
+    const n = await syncPaidSignupsFromGmail({ from: adminFrom } as never, "http://localhost");
+    expect(n).toBe(0);
+  });
+
+  it("returns 0 and updates settings when no Gmail hits", async () => {
+    listMock.mockResolvedValueOnce({ data: { messages: [] } });
+    const { syncPaidSignupsFromGmail } = await import("@/lib/gmail-sync");
+    const settingsUpdate = vi.fn(() => ({
+      eq: vi.fn().mockResolvedValue({ error: null }),
+    }));
+    const pending = [
+      {
+        id: "su-0",
+        game_id: "g1",
+        email: "p@example.com",
+        paid: false,
+        payment_code: "NYM-QQ11-RR22",
+      },
+    ];
+    const adminFrom = vi.fn((table: string) => {
+      if (table === "signups") {
+        return {
+          select: () => ({
+            eq: () => ({
+              not: () => Promise.resolve({ data: pending, error: null }),
+            }),
+          }),
+        };
+      }
+      if (table === "admin_settings") {
+        return {
+          select: () => ({
+            eq: () => ({
+              maybeSingle: async () => ({
+                data: {
+                  gmail_refresh_token: "rt",
+                  gmail_connected_email: "a@b.com",
+                  gmail_assumed_expires_at: null,
+                  gmail_reauth_required: false,
+                },
+                error: null,
+              }),
+            }),
+          }),
+          update: settingsUpdate,
+        };
+      }
+      if (table === "game_email_sync_config") {
+        return {
+          select: () => ({
+            in: () => Promise.resolve({ data: [], error: null }),
+          }),
+        };
+      }
+      throw new Error(`unexpected ${table}`);
     });
     const admin = { from: adminFrom };
     const n = await syncPaidSignupsFromGmail(admin as never, "http://localhost");
     expect(n).toBe(0);
-    expect(updateChain.eq).toHaveBeenCalled();
+    expect(settingsUpdate).toHaveBeenCalled();
   });
 
   it("matches code from Interac sender, updates signup, sends confirmation", async () => {
@@ -177,8 +284,13 @@ describe("syncPaidSignupsFromGmail", () => {
         return {
           select: () => ({
             eq: () => ({
-              single: async () => ({
-                data: { gmail_refresh_token: "rt", gmail_connected_email: "a@b.com" },
+              maybeSingle: async () => ({
+                data: {
+                  gmail_refresh_token: "rt",
+                  gmail_connected_email: "a@b.com",
+                  gmail_assumed_expires_at: null,
+                  gmail_reauth_required: false,
+                },
                 error: null,
               }),
             }),
@@ -190,6 +302,13 @@ describe("syncPaidSignupsFromGmail", () => {
               Promise.resolve({ data: null, error: null }).then(fn);
             return c;
           },
+        };
+      }
+      if (table === "game_email_sync_config") {
+        return {
+          select: () => ({
+            in: () => Promise.resolve({ data: [], error: null }),
+          }),
         };
       }
       if (table === "signups") {
@@ -259,13 +378,25 @@ describe("syncPaidSignupsFromGmail", () => {
         return {
           select: () => ({
             eq: () => ({
-              single: async () => ({
-                data: { gmail_refresh_token: "rt", gmail_connected_email: null },
+              maybeSingle: async () => ({
+                data: {
+                  gmail_refresh_token: "rt",
+                  gmail_connected_email: null,
+                  gmail_assumed_expires_at: null,
+                  gmail_reauth_required: false,
+                },
                 error: null,
               }),
             }),
           }),
           update: () => ({ eq: vi.fn().mockResolvedValue({ error: null }) }),
+        };
+      }
+      if (table === "game_email_sync_config") {
+        return {
+          select: () => ({
+            in: () => Promise.resolve({ data: [], error: null }),
+          }),
         };
       }
       if (table === "signups") {
@@ -341,8 +472,13 @@ describe("syncPaidSignupsFromGmail", () => {
         return {
           select: () => ({
             eq: () => ({
-              single: async () => ({
-                data: { gmail_refresh_token: "rt", gmail_connected_email: "a@b.com" },
+              maybeSingle: async () => ({
+                data: {
+                  gmail_refresh_token: "rt",
+                  gmail_connected_email: "a@b.com",
+                  gmail_assumed_expires_at: null,
+                  gmail_reauth_required: false,
+                },
                 error: null,
               }),
             }),
@@ -354,6 +490,13 @@ describe("syncPaidSignupsFromGmail", () => {
               Promise.resolve({ data: null, error: null }).then(fn);
             return c;
           },
+        };
+      }
+      if (table === "game_email_sync_config") {
+        return {
+          select: () => ({
+            in: () => Promise.resolve({ data: [], error: null }),
+          }),
         };
       }
       if (table === "signups") {

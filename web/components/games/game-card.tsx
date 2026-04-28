@@ -34,7 +34,7 @@ import { cn } from "@/lib/utils";
 
 const ROSTER_PREVIEW_TOP = 3;
 
-/** Fixed column on sm+ — room for 3 avatars + +n + share, progress and Join aligned. */
+/** Fixed column on sm+ → room for 3 avatars + +n + share, progress and Join aligned. */
 const gameCardCtaWidthClass = "w-full min-w-0 sm:w-[11rem]";
 
 function SpotsBadge({ game, signups }: { game: Game; signups: Signup[] }) {
@@ -110,7 +110,7 @@ export function GameCard({
       ? "Invite only"
       : registrationNotYetOpen(game)
         ? "Opens later"
-        : "Full — join waitlist";
+        : "Full → join waitlist";
 
   const locationPinLine = hasDistinctGameAddress(game.location, game.address)
     ? game.address
@@ -124,7 +124,7 @@ export function GameCard({
       )}
     >
       <div className="flex min-h-[7.5rem] items-stretch">
-        {/* Date rail — accent stripe + day / DOW */}
+        {/* Date rail → accent stripe + day / DOW */}
         <div
           className={cn(
             "relative flex w-[4.25rem] shrink-0 flex-col sm:w-[4.75rem] md:w-[14%] md:max-w-[6.5rem]",
@@ -142,14 +142,14 @@ export function GameCard({
           </div>
         </div>
 
-        {/* Body — sm+: main block and CTA row are side-by-side, vertically centered */}
+        {/* Body → sm+: main block and CTA row are side-by-side, vertically centered */}
         <div
           className={cn(
             "relative flex min-w-0 flex-1 flex-col gap-2.5 p-3.5 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:p-4"
           )}
         >
           <div className="flex min-w-0 flex-1 flex-col gap-2.5 sm:min-w-0">
-            {/* Availability — mobile: share upper-right of badge; sm+: share lives with roster row */}
+            {/* Availability → mobile: share upper-right of badge; sm+: share lives with roster row */}
             <div className="flex min-w-0 items-start justify-between gap-2 sm:items-center">
               <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                 <SpotsBadge game={game} signups={signups} />
@@ -166,7 +166,7 @@ export function GameCard({
               />
             </div>
 
-            {/* Title + court / time / address — tight stack */}
+            {/* Title + court / time / address → tight stack */}
             <div className="flex min-w-0 flex-col gap-0">
               <h2 className="text-base font-bold leading-tight tracking-tight text-foreground sm:text-lg md:text-xl">
                 {game.location}
@@ -231,7 +231,7 @@ export function GameCard({
                           <DialogTrigger asChild>
                             <Avatar
                               className="z-[1] size-7 cursor-pointer border-2 border-card sm:size-8"
-                              aria-label={`${playerOverflowCount} more players — open roster`}
+                              aria-label={`${playerOverflowCount} more players → open roster`}
                             >
                               <AvatarFallback className="bg-muted text-[0.6rem] font-bold text-muted-foreground sm:text-[0.65rem]">
                                 +{playerOverflowCount}
@@ -329,7 +329,7 @@ export function GameCard({
               >
                 <Link href={`/app/games/${game.id}`} className="inline-flex items-center justify-center gap-2">
                   <UserPlus className="size-4" aria-hidden />
-                  {ctaLabel ?? `Join — $${Number(game.price).toFixed(0)}`}
+                  {ctaLabel ?? `Join → $${Number(game.price).toFixed(0)}`}
                 </Link>
               </Button>
             )}

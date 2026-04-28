@@ -23,6 +23,9 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 
+# Local AI tooling state
+**/.claude/settings.local.json
+
 # Next.js (also covered by web/.gitignore)
 .next/
 out/

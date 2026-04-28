@@ -12,7 +12,7 @@ import { supabaseAuthCookieOptions } from "@/lib/supabase/auth-cookie-options";
  * - **Site URL**: production origin (not localhost), e.g. https://vbnym.ednsy.com
  * - **Redirect URLs**: http://localhost:3000/auth/callback and
  *   https://<your-production-domain>/auth/callback
- * If Site URL is still localhost, Supabase may send `?code=` to `/` — `proxy.ts`
+ * If Site URL is still localhost, Supabase may send `?code=` to `/` → `proxy.ts`
  * forwards that to this route.
  */
 export async function GET(request: NextRequest) {

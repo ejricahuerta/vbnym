@@ -3,8 +3,8 @@
  * Local mock: POST /api/cron/gmail-reauth-reminder with x-cron-token.
  *
  * Env:
- *   PAYMENT_SYNC_CRON_TOKEN — required (same secret as payment sync cron)
- *   GMAIL_REAUTH_CRON_ENDPOINT — optional, default http://localhost:3000/api/cron/gmail-reauth-reminder
+ *   PAYMENT_SYNC_CRON_TOKEN → required (same secret as payment sync cron)
+ *   GMAIL_REAUTH_CRON_ENDPOINT → optional, default http://localhost:3000/api/cron/gmail-reauth-reminder
  */
 
 const endpoint =

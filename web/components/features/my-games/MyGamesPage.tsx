@@ -5,6 +5,7 @@ import { FindMyGamesDialog } from "@/components/games/find-my-games-dialog";
 import { MyGamesClient } from "@/components/games/my-games-client";
 import { MyGamesRecoveryBanner } from "@/components/games/my-games-recovery-banner";
 import { PlayerPageHeading } from "@/components/layout/player-page-heading";
+import { SixBackPageShell, SixBackSection } from "@/components/shared/SixBackPageShell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getMyGamesAccessState } from "@/lib/my-games-saved-ids";
@@ -17,7 +18,7 @@ export async function MyGamesPage() {
     : { games: [], signupsByGameId: {} };
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6 sm:px-6 lg:max-w-4xl lg:py-10 xl:max-w-6xl 2xl:max-w-6xl">
+    <SixBackPageShell className="max-w-6xl">
       <PlayerPageHeading
         title="My games"
         description="Your upcoming volleyball sessions and payment details."
@@ -25,7 +26,11 @@ export async function MyGamesPage() {
       <Suspense fallback={null}>
         <MyGamesRecoveryBanner />
       </Suspense>
-      <div className="mt-6 sm:mt-8">
+      <SixBackSection
+        title="Saved Sessions"
+        eyebrow="Player Portal"
+        description="Access your registered games, payment states, and upcoming schedules in one place."
+      >
         {isAuthenticated ? (
           <MyGamesClient
             games={games}
@@ -53,7 +58,7 @@ export async function MyGamesPage() {
             </CardContent>
           </Card>
         )}
-      </div>
-    </main>
+      </SixBackSection>
+    </SixBackPageShell>
   );
 }
