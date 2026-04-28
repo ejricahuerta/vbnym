@@ -165,7 +165,7 @@ export function EditVenueForm({ venue }: { venue: Venue }) {
                     />
                     {!previewUrl && (
                       <p className="px-3 py-1.5 text-xs text-muted-foreground">
-                        Placeholder — add a URL above to preview the actual photo
+                        Placeholder → add a URL above to preview the actual photo
                       </p>
                     )}
                   </div>

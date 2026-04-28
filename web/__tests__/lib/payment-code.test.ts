@@ -4,9 +4,9 @@ import { generatePaymentCode } from "@/lib/payment-code";
 describe("generatePaymentCode", () => {
   const secret = "test-secret";
 
-  it("generates NYM-XXXX-XXXX format", () => {
+  it("generates 6IX-XXXX-XXXX format", () => {
     const code = generatePaymentCode("g1", "s1", "a@b.com", secret);
-    expect(code).toMatch(/^NYM-[A-Z0-9]{4}-[A-Z0-9]{4}$/);
+    expect(code).toMatch(/^6IX-[A-Z0-9]{4}-[A-Z0-9]{4}$/);
   });
 
   it("is deterministic for same inputs", () => {

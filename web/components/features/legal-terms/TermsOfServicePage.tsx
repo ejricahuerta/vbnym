@@ -7,10 +7,10 @@ export function TermsOfServicePage() {
     <div className="min-h-screen bg-background">
       <SiteHeader />
       <main className="mx-auto max-w-2xl px-4 py-10 pb-16 sm:px-6">
-        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">North York | Markham Volleyball</p>
+        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">6IX BACK Volleyball</p>
         <h1 className="mt-2 font-heading text-3xl font-bold tracking-tight text-foreground">Terms of Service</h1>
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-          Effective April 13, 2026. By using the NYM Volleyball website or registering for a drop-in game you agree to
+          Effective April 13, 2026. By using the 6IX BACK Volleyball website or registering for a drop-in game you agree to
           these terms.
         </p>
 
@@ -18,8 +18,8 @@ export function TermsOfServicePage() {
           <h2 className="font-heading text-lg font-semibold text-foreground">1. About the service</h2>
           <div className="mt-4 space-y-3 text-sm leading-relaxed text-muted-foreground">
             <p>
-              North York | Markham Volleyball (&quot;NYM,&quot; &quot;we,&quot; &quot;us&quot;) operates a recreational
-              drop-in volleyball program in the North York and Markham areas of Ontario, Canada. We provide a website at{" "}
+              6IX BACK Volleyball (&quot;6IX BACK,&quot; &quot;we,&quot; &quot;us&quot;) operates a recreational drop-in
+              volleyball program in Toronto and the GTA in Ontario, Canada. We provide a website at{" "}
               <span className="font-medium text-foreground">vbnym.ednsy.com</span> (the &quot;Site&quot;) for browsing
               upcoming games, signing up for spots, and managing your registrations.
             </p>
@@ -43,7 +43,7 @@ export function TermsOfServicePage() {
         </section>
 
         <section className="mt-8 rounded-2xl border border-border bg-card p-5 sm:p-6">
-          <h2 className="font-heading text-lg font-semibold text-foreground">3. Registration &amp; payment</h2>
+          <h2 className="font-heading text-lg font-semibold text-foreground">3. Registration and payment</h2>
           <div className="mt-4 space-y-3 text-sm leading-relaxed text-muted-foreground">
             <p>
               When you sign up for a game you receive a time-limited payment code. Payment is by Interac e-Transfer and
@@ -64,7 +64,7 @@ export function TermsOfServicePage() {
         </section>
 
         <section className="mt-8 rounded-2xl border border-border bg-card p-5 sm:p-6">
-          <h2 className="font-heading text-lg font-semibold text-foreground">4. Cancellations &amp; refunds</h2>
+          <h2 className="font-heading text-lg font-semibold text-foreground">4. Cancellations and refunds</h2>
           <div className="mt-4 space-y-3 text-sm leading-relaxed text-muted-foreground">
             <p>
               To cancel under our policy, contact us before the cancellation deadline shown in our{" "}
@@ -99,7 +99,7 @@ export function TermsOfServicePage() {
           <div className="mt-4 space-y-3 text-sm leading-relaxed text-muted-foreground">
             <p>
               All players are expected to behave respectfully toward other participants, organizers, and facility staff.
-              We reserve the right to remove any player from a game or ban them from future games — without refund — for
+              We reserve the right to remove any player from a game or ban them from future games → without refund → for
               unsafe, abusive, or disruptive conduct.
             </p>
           </div>
@@ -109,7 +109,7 @@ export function TermsOfServicePage() {
           <h2 className="font-heading text-lg font-semibold text-foreground">7. Intellectual property</h2>
           <div className="mt-4 space-y-3 text-sm leading-relaxed text-muted-foreground">
             <p>
-              All content on the Site — including text, graphics, logos, and software — is the property of NYM Volleyball
+              All content on the Site → including text, graphics, logos, and software → is the property of 6IX BACK Volleyball
               or its licensors and is protected by applicable intellectual-property laws. You may not copy, reproduce, or
               distribute any Site content without our prior written consent.
             </p>
@@ -130,7 +130,7 @@ export function TermsOfServicePage() {
           <h2 className="font-heading text-lg font-semibold text-foreground">9. Limitation of liability</h2>
           <div className="mt-4 space-y-3 text-sm leading-relaxed text-muted-foreground">
             <p>
-              To the maximum extent permitted by Ontario law, NYM Volleyball and its organizers shall not be liable for
+              To the maximum extent permitted by Ontario law, 6IX BACK Volleyball and its organizers shall not be liable for
               any indirect, incidental, special, or consequential damages arising from your use of the Site or
               participation in any game.
             </p>
@@ -163,7 +163,14 @@ export function TermsOfServicePage() {
           <h2 className="font-heading text-lg font-semibold text-foreground">12. Contact</h2>
           <div className="mt-4 space-y-3 text-sm leading-relaxed text-muted-foreground">
             <p>
-              Questions about these Terms? Reach out through our{" "}
+              Questions about these Terms? Contact Edmel at{" "}
+              <a
+                href="mailto:contact@edmel.dev"
+                className="font-medium text-accent underline decoration-accent/50 underline-offset-4 hover:opacity-80"
+              >
+                contact@edmel.dev
+              </a>
+              , or reach out through our{" "}
               <Link href="/community" className="font-medium text-accent underline decoration-accent/50 underline-offset-4 hover:opacity-80">
                 Community inbox
               </Link>

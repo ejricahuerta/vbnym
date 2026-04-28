@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { createGmailOAuthUrl } from "@/lib/gmail-sync";
+import { createGmailOAuthUrl, encodeGmailOAuthState } from "@/lib/gmail-sync";
 import { isAuthorizedAdmin } from "@/lib/auth";
 import { configuredPublicOrigin } from "@/lib/configured-public-origin";
 
@@ -16,7 +16,20 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const url = createGmailOAuthUrl(publicOrigin);
+    const mode =
+      request.nextUrl.searchParams.get("mode") === "game" ? "game" : "universal";
+    const gameId = request.nextUrl.searchParams.get("gameId")?.trim();
+    if (mode === "game" && !gameId) {
+      const dest = new URL("/admin/games", publicOrigin);
+      dest.searchParams.set("error", "missing_game_id_for_gmail_oauth");
+      return NextResponse.redirect(dest);
+    }
+    const state = encodeGmailOAuthState({
+      v: 1,
+      mode,
+      gameId: mode === "game" ? gameId : undefined,
+    });
+    const url = createGmailOAuthUrl(publicOrigin, state);
     return NextResponse.redirect(url);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not start Gmail OAuth.";

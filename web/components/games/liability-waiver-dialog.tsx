@@ -30,7 +30,7 @@ export function LiabilityWaiverDialog({ open, onOpenChange, onAccept }: Props) {
             Liability waiver and release of claims
           </DialogTitle>
           <DialogDescription className="text-left text-xs sm:text-sm">
-            Recreational volleyball drop-in program — Ontario, Canada. Please read carefully before accepting
+            Recreational volleyball drop-in program → Ontario, Canada. Please read carefully before accepting
             below.
           </DialogDescription>
         </DialogHeader>

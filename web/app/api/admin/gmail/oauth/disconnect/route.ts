@@ -23,6 +23,8 @@ export async function POST() {
         gmail_connected_at: null,
         gmail_assumed_expires_at: null,
         gmail_reauth_reminder_sent_for_expires_at: null,
+        gmail_reauth_required: false,
+        gmail_last_successful_refresh_at: null,
       })
       .eq("id", 1);
 

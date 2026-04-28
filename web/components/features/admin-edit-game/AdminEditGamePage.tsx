@@ -5,6 +5,7 @@ import { EditGameForm } from "@/components/admin/edit-game-form";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
 import { getAdminHasSignupForGame } from "@/server/queries/admin-game-edit";
+import { getGameEmailSyncForAdmin } from "@/server/queries/game-email-sync";
 import { getGameById } from "@/server/queries/games";
 import { getVenues } from "@/server/queries/venues";
 
@@ -19,6 +20,7 @@ export async function AdminEditGamePage({ id }: { id: string }) {
   } = await supabase.auth.getUser();
   const adminEmail = user?.email?.trim().toLowerCase() ?? null;
   const adminAlreadySignedUp = await getAdminHasSignupForGame(id, adminEmail);
+  const emailSync = await getGameEmailSyncForAdmin(id);
 
   return (
     <div className="space-y-6">
@@ -43,6 +45,7 @@ export async function AdminEditGamePage({ id }: { id: string }) {
         game={game}
         venues={venues}
         adminAlreadySignedUp={adminAlreadySignedUp}
+        emailSync={emailSync}
       />
     </div>
   );

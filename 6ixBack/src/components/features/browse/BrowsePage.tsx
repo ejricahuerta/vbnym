@@ -1,0 +1,21 @@
+import { SiteHeader } from "@/components/SiteHeader";
+import { SiteFooter } from "@/components/SiteFooter";
+import { BrowseClient } from "@/components/features/browse/BrowseClient";
+import { listLiveGames } from "@/server/queries/games";
+
+export async function BrowsePage() {
+  const games = await listLiveGames();
+
+  return (
+    <div>
+      <SiteHeader />
+      <section style={{ borderBottom: "2px solid var(--ink)", background: "var(--bg)" }}>
+        <div style={{ maxWidth: 1280, margin: "0 auto", padding: "36px 18px 28px" }}>
+          <div className="label" style={{ marginBottom: 10 }}>Browse · {games.length} results</div>
+          <BrowseClient games={games} />
+        </div>
+      </section>
+      <SiteFooter />
+    </div>
+  );
+}

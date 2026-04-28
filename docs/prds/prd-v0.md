@@ -1,7 +1,7 @@
-# NYM Volleyball — Product Requirements Document
+# NYM Volleyball → Product Requirements Document
 
 **Product:** NYM Drop-in Volleyball Signup App  
-**Version:** 2.1 — Production + Auto-Pay Verification  
+**Version:** 2.1 → Production + Auto-Pay Verification  
 **Stack:** Next.js (App Router), shadcn/ui, Supabase, Vercel  
 **Sprint:** 2 engineering days (16 hours)  
 **Status:** Draft  
@@ -14,7 +14,7 @@
 
 | Change | Detail |
 |--------|--------|
-| v2.1 | **Stack:** Next.js App Router + shadcn/ui (Tailwind, Radix). Env: `NEXT_PUBLIC_*` for browser-safe keys. APIs: App Router `route.ts` handlers. **UI:** Mocks in `docs/prds/assets/` — canonical list `ui-reference-list-view.png` (§12.2); see `prd-mock-design.md` §6.1 for `screen*.png` inventory. |
+| v2.1 | **Stack:** Next.js App Router + shadcn/ui (Tailwind, Radix). Env: `NEXT_PUBLIC_*` for browser-safe keys. APIs: App Router `route.ts` handlers. **UI:** Mocks in `docs/prds/assets/` → canonical list `ui-reference-list-view.png` (§12.2); see `prd-mock-design.md` §6.1 for `screen*.png` inventory. |
 | v2.0 | Encrypted payment code per signup; Gmail OAuth; auto-mark-paid; Vercel cron; `admin_settings` schema; security section expanded |
 | v1.0 | Client-only prototype |
 
@@ -26,7 +26,7 @@
 Client-side only: no persistence, no real auth, no email, no deployment.
 
 ### After persistence (still painful)
-Even with persistence, the organizer has to manually check every e-transfer and manually mark each player as paid. At 3–4 runs per week, 10–16 players per run, that's 30–60 manual updates weekly — error-prone and time-consuming.
+Even with persistence, the organizer has to manually check every e-transfer and manually mark each player as paid. At 3–4 runs per week, 10–16 players per run, that's 30–60 manual updates weekly → error-prone and time-consuming.
 
 **The core insight:** Interac sends the organizer an email notification for every e-transfer received. That email contains the sender's message/memo. If every player puts a unique, verifiable code in their e-transfer message, the system can read those emails and mark payments automatically.
 
@@ -43,14 +43,14 @@ e.g.  NYM-X4K2-P9R7
     │
     ▼
 Player receives confirmation email with code
-"Send $15 to volley@nymvb.ca — message: NYM-X4K2-P9R7"
+"Send $15 to volley@nymvb.ca → message: NYM-X4K2-P9R7"
     │
     ▼
 Player sends Interac e-transfer with code in message field
     │
     ▼
 Interac notifies organizer's Gmail:
-"You received $15.00 — Message: NYM-X4K2-P9R7"
+"You received $15.00 → Message: NYM-X4K2-P9R7"
     │
     ▼
 System polls Gmail (every 15 min via cron OR on-demand)
@@ -79,8 +79,8 @@ Admin sees live "paid" status in dashboard
 
 ## 4. Non-Goals (v2)
 
-- Real payment processing (Stripe, Square) — the app facilitates e-transfer, not card payment
-- Reading player email inboxes — only organizer's Gmail is accessed
+- Real payment processing (Stripe, Square) → the app facilitates e-transfer, not card payment
+- Reading player email inboxes → only organizer's Gmail is accessed
 - Detecting fraud or disputed transfers
 - Supporting payment methods other than Interac e-transfer
 - Automatic refunds
@@ -101,11 +101,11 @@ Sets up Gmail OAuth once. From that point, incoming e-transfers are auto-matched
 
 ### 6.1 Code Design Goals
 
-- Unique per signup (not per run — two players at the same run need different codes)
+- Unique per signup (not per run → two players at the same run need different codes)
 - Short enough to type into an e-transfer message field (< 16 chars)
-- Human-readable — no ambiguous chars (0/O, 1/I/l)
-- Cryptographically verifiable — system can confirm a code is legitimate
-- Opaque — seeing one code reveals nothing about the system or other codes
+- Human-readable → no ambiguous chars (0/O, 1/I/l)
+- Cryptographically verifiable → system can confirm a code is legitimate
+- Opaque → seeing one code reveals nothing about the system or other codes
 
 ### 6.2 Code Format
 
@@ -117,15 +117,15 @@ NYM - XXXX - XXXX
 
 - Prefix `NYM-` makes codes immediately identifiable in email search
 - 8 alphanumeric characters (base32 alphabet, no O/0/I/1)
-- Total visible length: 13 characters — fits comfortably in Interac message field (140 char limit)
+- Total visible length: 13 characters → fits comfortably in Interac message field (140 char limit)
 
 ### 6.3 Code Generation (Server-side only)
 
 ```typescript
-// app/lib/payment-code.ts — used from Route Handlers (Node.js runtime for crypto)
+// app/lib/payment-code.ts → used from Route Handlers (Node.js runtime for crypto)
 import crypto from "node:crypto";
 
-// Base32 alphabet — excludes 0, 1, I, O to avoid confusion
+// Base32 alphabet → excludes 0, 1, I, O to avoid confusion
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 function toBase32(buffer: Buffer, length: number): string {
@@ -146,7 +146,7 @@ export function generatePaymentCode(runId: string, signupId: string, email: stri
   // Payload: deterministic, unique per signup
   const payload = `${runId}:${signupId}:${email.toLowerCase()}`;
 
-  // HMAC-SHA256 with server secret — only server can verify
+  // HMAC-SHA256 with server secret → only server can verify
   const hmac = crypto.createHmac("sha256", process.env.PAYMENT_CODE_SECRET);
   hmac.update(payload);
   const hash = hmac.digest();
@@ -169,7 +169,7 @@ export function verifyPaymentCode(code: string, runId: string, signupId: string,
 **Implementation:** Prefer **Node.js** `runtime` on Route Handlers that import this module (`node:crypto` / `Buffer`). Edge requires a Web Crypto–based rewrite.
 
 **Properties:**
-- Deterministic — same inputs always produce same code (no nonce needed)
+- Deterministic → same inputs always produce same code (no nonce needed)
 - Cannot be brute-forced without the secret key
 - ~10³⁸ possible values per 8-char base32 string
 - Server can re-derive and verify any code from the signup record
@@ -225,7 +225,7 @@ Refresh token stored encrypted in admin_settings table
 Access token cached in memory (or Supabase with expiry)
     │
     ▼
-Admin dashboard shows "Gmail connected ✓ — youremail@gmail.com"
+Admin dashboard shows "Gmail connected ✓ → youremail@gmail.com"
 ```
 
 ### 7.3 Token Management
@@ -284,14 +284,14 @@ Interac e-transfer notifications arrive at the organizer's Gmail from bank notif
 "NYM-" in:inbox
 ```
 
-This searches the organizer's inbox for any email containing `NYM-` — which will match all payment codes (`NYM-XXXX-XXXX`). Simple, reliable, not dependent on Interac's changing email formatting.
+This searches the organizer's inbox for any email containing `NYM-` → which will match all payment codes (`NYM-XXXX-XXXX`). Simple, reliable, not dependent on Interac's changing email formatting.
 
 **Why this works:**
 - The `NYM-` prefix is specific enough to avoid false positives
 - Interac emails containing the memo text will match
 - Works regardless of which bank sends the notification
 
-**Fallback — search by specific code:**
+**Fallback → search by specific code:**
 ```
 "NYM-X4K2-P9R7" in:anywhere
 ```
@@ -301,7 +301,7 @@ Used when verifying a specific signup rather than scanning all.
 ### 8.2 Payment Sync Algorithm
 
 ```typescript
-// app/api/gmail/sync/route.ts — Route Handler (admin only, Node.js runtime if using node:crypto)
+// app/api/gmail/sync/route.ts → Route Handler (admin only, Node.js runtime if using node:crypto)
 
 export async function syncPayments(supabase, accessToken) {
   const results = { matched: 0, skipped: 0, errors: [] };
@@ -366,7 +366,7 @@ export async function syncPayments(supabase, accessToken) {
 }
 
 function extractEmailBody(email) {
-  // Handle multipart MIME — prefer text/plain
+  // Handle multipart MIME → prefer text/plain
   const parts = email.payload?.parts || [email.payload];
   for (const part of parts) {
     if (part.mimeType === "text/plain" && part.body?.data) {
@@ -444,7 +444,7 @@ New section in admin dashboard under a "Settings" tab:
 ┌─────────────────────────────────────────────────────────┐
 │ 💳 Auto-Pay via Gmail                                   │
 │                                                         │
-│ ● Connected — payments@gmail.com                        │
+│ ● Connected → payments@gmail.com                        │
 │ Last synced: 3 minutes ago (found 2 payments)           │
 │                                                         │
 │ [ Sync now ]   [ Disconnect Gmail ]                     │
@@ -485,7 +485,7 @@ Runs: 3  ·  Players: 9  ·  Paid: 6  ·  Gmail: syncing every 15 min  ·  [ Syn
 
 ---
 
-## 10. Data Schema (Complete — v2)
+## 10. Data Schema (Complete → v2)
 
 ```sql
 -- ── Runs ────────────────────────────────────────────────
@@ -562,7 +562,7 @@ create policy "admin only settings"    on admin_settings for all using (auth.rol
 ### 11.1 Player Confirmation (Resend)
 
 ```
-Subject: You're in — [Location] on [Weekday, Month Day]
+Subject: You're in → [Location] on [Weekday, Month Day]
 
 Hey [First Name],
 
@@ -570,7 +570,7 @@ Your spot is locked. Here's everything you need:
 
   📍 [Location]
   🗓  [Weekday], [Month Day] at [Time]
-  👥 [N] player(s) — [Name] + [Friend1, Friend2]
+  👥 [N] player(s) → [Name] + [Friend1, Friend2]
   💰 $[Total] due
 
 
@@ -590,14 +590,14 @@ See you on the court,
 NYM Volleyball
 ```
 
-### 11.2 Admin Notification (Resend — on each signup)
+### 11.2 Admin Notification (Resend → on each signup)
 
 ```
 Subject: New signup · [Run ID] · [Location] [Date]
 
 [Name] signed up
 
-Run:    [Location] — [Date] at [Time]
+Run:    [Location] → [Date] at [Time]
 Code:   NYM-XXXX-XXXX
 Group:  [Name] [+ Friend1, Friend2 if any]
 Email:  [email]
@@ -614,18 +614,18 @@ Spots:  [remaining] left
 | Layer | Choice | Notes |
 |-------|--------|--------|
 | Framework | **Next.js** (App Router) | `app/` routes, layouts, loading/error UI, metadata |
-| UI kit | **shadcn/ui** | Tailwind CSS, Radix primitives — components live in `components/ui/` |
+| UI kit | **shadcn/ui** | Tailwind CSS, Radix primitives → components live in `components/ui/` |
 | Patterns | Server Components by default | `"use client"` for maps, rich interactions, OAuth redirect triggers |
 
 **shadcn/ui (indicative):** `Button`, `Input`, `Label`, `Card`, `Table`, `Badge`, `Dialog` / `Sheet` (mobile panels), `Tabs` (list vs map), `Toast` (e.g. Sonner) for sync feedback, `DropdownMenu` for admin row actions. One design system; avoid mixing unrelated UI kits.
 
-### 12.2 UI reference — player list (mockup)
+### 12.2 UI reference → player list (mockup)
 
 High-fidelity target for the **public runs** experience (list view). File in repo:
 
 `docs/prds/assets/ui-reference-list-view.png`
 
-![NYM volleyball — list view mockup: header, list/map toggle, event cards](assets/ui-reference-list-view.png)
+![NYM volleyball → list view mockup: header, list/map toggle, event cards](assets/ui-reference-list-view.png)
 
 **Layout**
 
@@ -648,27 +648,27 @@ High-fidelity target for the **public runs** experience (list view). File in rep
 | Who’s in | Row of `Badge`s: avatar initials + name; optional “+1”; **open** slots = dashed border + `UserPlus` + “open”. Empty state: “be the first to join.” |
 | CTA | Full-width navy `Button`: “join this game” + `UserPlus`. |
 
-**Icons:** Lucide (default with shadcn). **Typography:** Inter or Geist. **Map view:** same chrome; map body is out of scope for this still — match colors and toggles.
+**Icons:** Lucide (default with shadcn). **Typography:** Inter or Geist. **Map view:** same chrome; map body is out of scope for this still → match colors and toggles.
 
 **Process for new mocks:** See [prd-mock-design.md](./prd-mock-design.md) (deliverables, naming, screen inventory, handoff).
 
-**Additional mocks (same folder):** `screen.png`, `screen-2.png`, … `screen-5.png` — exploratory / future-screen references. Inventory and product mapping: [prd-mock-design.md](./prd-mock-design.md) section **6.1**.
+**Additional mocks (same folder):** `screen.png`, `screen-2.png`, … `screen-5.png` → exploratory / future-screen references. Inventory and product mapping: [prd-mock-design.md](./prd-mock-design.md) section **6.1**.
 
 ### 12.3 System diagram
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│     Browser — Next.js (React, App Router) + shadcn/ui        │
+│     Browser → Next.js (React, App Router) + shadcn/ui        │
 │     Player: runs, signup, map · Admin: CRUD, Gmail, sync   │
 └───────────────┬────────────────────────────────────────────┘
                 │ Supabase client (@supabase/ssr + cookies)
 ┌───────────────▼────────────────────────────────────────────┐
-│           Supabase — Postgres, Auth, RLS                    │
+│           Supabase → Postgres, Auth, RLS                    │
 │           Webhook → POST /api/notify on signup insert       │
 └───────────────┬────────────────────────────────────────────┘
                 │
 ┌───────────────▼────────────────────────────────────────────┐
-│   Vercel — Next.js Route Handlers + Cron                    │
+│   Vercel → Next.js Route Handlers + Cron                    │
 │   app/api/notify, app/api/gmail/*                           │
 │   Node.js runtime where node:crypto / Buffer is required    │
 └───────────────┬────────────────────────────────────────────┘
@@ -732,8 +732,8 @@ openssl rand -base64 24  # for CRON_SECRET
 | Threat | Mitigation |
 |--------|-----------|
 | Refresh token exposed in DB | Encrypted with AES-256 using `TOKEN_ENCRYPTION_KEY` before storage |
-| Refresh token leaked via Supabase | `admin_settings` table has RLS — only authenticated admin can read |
-| Broad Gmail access granted | Only `gmail.readonly` scope — cannot send, modify, or delete emails |
+| Refresh token leaked via Supabase | `admin_settings` table has RLS → only authenticated admin can read |
+| Broad Gmail access granted | Only `gmail.readonly` scope → cannot send, modify, or delete emails |
 | Cron endpoint called by attacker | `CRON_SECRET` header required; Vercel validates this automatically |
 | Access token cached insecurely | Not persisted; refreshed per-request in Route Handlers |
 | Organizer's Gmail compromised | Scope is read-only; worst case: attacker sees payment notifications, not email content |
@@ -752,7 +752,7 @@ await supabase.from("signups").insert({ ... })       // ✓ public insert
 await supabase.from("runs").insert({ ... })          // ✗ requires auth
 await supabase.from("runs").delete().eq("id", x)     // ✗ requires auth
 await supabase.from("signups").update({ paid:true }) // ✗ requires auth
-await supabase.from("admin_settings").select("*")    // ✗ requires auth — protects OAuth token
+await supabase.from("admin_settings").select("*")    // ✗ requires auth → protects OAuth token
 ```
 
 ---
@@ -831,7 +831,7 @@ Returns 200 with sync results or 401 if secret invalid.
 
 ## 16. User Stories
 
-### P0 — Day 1 (blocks go-live)
+### P0 → Day 1 (blocks go-live)
 
 | ID | Story | Acceptance Criteria |
 |----|-------|---------------------|
@@ -842,7 +842,7 @@ Returns 200 with sync results or 401 if secret invalid.
 | US-05 | Admin marks paid manually (fallback) | Survives Gmail outage |
 | US-06 | App live at real URL | Vercel deploy; works on mobile |
 
-### P0 — Day 2 (core payment automation)
+### P0 → Day 2 (core payment automation)
 
 | ID | Story | Acceptance Criteria |
 |----|-------|---------------------|
@@ -852,19 +852,19 @@ Returns 200 with sync results or 401 if secret invalid.
 | US-10 | Admin sees last sync time and match count | Dashboard header |
 | US-11 | Payment code shown per signup in admin view | Visible in expanded signup row |
 
-### P1 — Ship if ahead of schedule
+### P1 → Ship if ahead of schedule
 
 | ID | Story |
 |----|-------|
 | US-12 | Admin notification email on each new signup |
 | US-13 | Map tab persists (no remount on tab switch) |
-| US-14 | Supabase Realtime — live player count without refresh |
+| US-14 | Supabase Realtime → live player count without refresh |
 
-### P2 — Post-launch
+### P2 → Post-launch
 
 | ID | Story |
 |----|-------|
-| US-15 | Waitlist — notify on cancellation |
+| US-15 | Waitlist → notify on cancellation |
 | US-16 | Player can cancel via signed email link |
 | US-17 | Recurring run templates |
 | US-18 | Sync frequency configurable by admin |
@@ -873,28 +873,28 @@ Returns 200 with sync results or 401 if secret invalid.
 
 ## 17. Hour-by-Hour Sprint Plan
 
-### Day 1 — Foundation (8 hours)
+### Day 1 → Foundation (8 hours)
 
 | Time | Task | Done when |
 |------|------|-----------|
 | 0:00–1:00 | Supabase: project, schema, RLS, seed data, admin user | Tables exist, RLS passes checklist |
 | 1:00–2:00 | Data layer: Supabase from Server Components / server actions or client hooks | Refresh shows same data |
-| 2:00–3:00 | Supabase Auth — replace fake password with real login | Session persists |
-| 3:00–4:00 | `app/api/notify` — code generation + Resend email | Signup → email in inbox < 60s |
+| 2:00–3:00 | Supabase Auth → replace fake password with real login | Session persists |
+| 3:00–4:00 | `app/api/notify` → code generation + Resend email | Signup → email in inbox < 60s |
 | 4:00–5:00 | Next.js + shadcn init, env vars, first Vercel deploy | Live URL; UI uses design system |
 | 5:00–6:00 | Mobile QA + bug fixes | Full flow works on iOS Safari |
 | 6:00–7:00 | End-to-end QA checklist (see section 18) | 0 P0 bugs |
 | 7:00–8:00 | Deploy Day 1 to production | Smoke tests pass |
 
-### Day 2 — Payment Automation (8 hours)
+### Day 2 → Payment Automation (8 hours)
 
 | Time | Task | Done when |
 |------|------|-----------|
 | 0:00–1:00 | Google Cloud Console: OAuth app, credentials, redirect URIs | Client ID + secret in hand |
 | 1:00–2:00 | `app/api/gmail/connect` + `callback/route.ts` | Admin can complete OAuth flow |
 | 2:00–3:00 | Token encryption at rest, store in admin_settings | Refresh token in DB, encrypted |
-| 3:00–4:00 | Gmail API — inbox search + email body parsing | Can find test code in Gmail |
-| 4:00–5:00 | `app/api/gmail/sync/route.ts` — full `syncPayments` flow | Unpaid → paid after code found |
+| 3:00–4:00 | Gmail API → inbox search + email body parsing | Can find test code in Gmail |
+| 4:00–5:00 | `app/api/gmail/sync/route.ts` → full `syncPayments` flow | Unpaid → paid after code found |
 | 5:00–6:00 | `vercel.json` cron → `app/api/gmail/sync-cron/route.ts` (GET + secret) | Cron fires every 15 min |
 | 6:00–7:00 | Admin UI (shadcn): Gmail panel, sync button, code column | UI reflects connection state |
 | 7:00–8:00 | End-to-end test: signup → e-transfer → auto-marked paid | Full flow confirmed |
@@ -906,24 +906,24 @@ Returns 200 with sync results or 401 if secret invalid.
 ### Day 1 Checklist
 
 **Player flow:**
-- [ ] Browse runs — list and map both show correct data
-- [ ] Sign up solo — confirmation email received with payment code
-- [ ] Sign up with 2 friends — email shows group of 3, total price correct
-- [ ] Attempt to sign up when run is full — blocked with clear error
-- [ ] Refresh page — signup persists, player appears in list
-- [ ] Open same URL in different browser — same data visible
+- [ ] Browse runs → list and map both show correct data
+- [ ] Sign up solo → confirmation email received with payment code
+- [ ] Sign up with 2 friends → email shows group of 3, total price correct
+- [ ] Attempt to sign up when run is full → blocked with clear error
+- [ ] Refresh page → signup persists, player appears in list
+- [ ] Open same URL in different browser → same data visible
 
 **Admin flow:**
-- [ ] Login with wrong password — error shown
-- [ ] Login with correct credentials — session persists on refresh
-- [ ] Create a new run — appears in list immediately
-- [ ] Delete a run — removed, no orphan signups
-- [ ] Mark signup as paid manually — persists in DB
-- [ ] Unmark paid — reverts correctly
+- [ ] Login with wrong password → error shown
+- [ ] Login with correct credentials → session persists on refresh
+- [ ] Create a new run → appears in list immediately
+- [ ] Delete a run → removed, no orphan signups
+- [ ] Mark signup as paid manually → persists in DB
+- [ ] Unmark paid → reverts correctly
 
 **Mobile:**
-- [ ] iOS Safari — signup form fills correctly
-- [ ] Map pins are tappable — slide panel opens
+- [ ] iOS Safari → signup form fills correctly
+- [ ] Map pins are tappable → slide panel opens
 - [ ] Panel close button works
 - [ ] Email confirmation readable on mobile
 
@@ -933,19 +933,19 @@ Returns 200 with sync results or 401 if secret invalid.
 - [ ] "Connect Gmail" button redirects to Google consent screen
 - [ ] OAuth shows correct scope (read-only)
 - [ ] After consent, redirected back to admin dashboard
-- [ ] Dashboard shows "Connected — [email]"
+- [ ] Dashboard shows "Connected → [email]"
 - [ ] Disconnect clears stored token
 - [ ] Reconnect works after disconnect
 
 **Payment sync:**
-- [ ] Generate a test signup — note the payment code
+- [ ] Generate a test signup → note the payment code
 - [ ] Send real Interac e-transfer with code in message field
 - [ ] Wait for Interac email to arrive in Gmail (usually < 5 min)
-- [ ] Click "Sync now" — signup shows as paid
+- [ ] Click "Sync now" → signup shows as paid
 - [ ] Verify `payment_verified_at` and `payment_email_id` populated in DB
-- [ ] Cron fires at :00, :15, :30, :45 — check Vercel logs
-- [ ] Test with group signup (1 payer, 2 friends) — all marked paid
-- [ ] Test with wrong/fake code in Gmail — no false positives
+- [ ] Cron fires at :00, :15, :30, :45 → check Vercel logs
+- [ ] Test with group signup (1 payer, 2 friends) → all marked paid
+- [ ] Test with wrong/fake code in Gmail → no false positives
 
 **Security:**
 - [ ] Unauthenticated POST to `/api/gmail/sync` returns 401
@@ -961,13 +961,13 @@ Returns 200 with sync results or 401 if secret invalid.
 |------|-----------|--------|------------|
 | Interac email body format varies by bank | Medium | High | Search for code string only (`NYM-XXXX-XXXX`), not sender/subject. Works regardless of bank. |
 | Player miscopies code in e-transfer | Medium | Low | Admin can still mark paid manually. Code is copyable from confirmation email. |
-| Gmail OAuth consent screen requires app verification | Low | High | `gmail.readonly` is a sensitive scope — Google may require verification for >100 users. **Mitigate:** App verification takes 1–5 days; start process in parallel with dev. |
+| Gmail OAuth consent screen requires app verification | Low | High | `gmail.readonly` is a sensitive scope → Google may require verification for >100 users. **Mitigate:** App verification takes 1–5 days; start process in parallel with dev. |
 | Refresh token expires unexpectedly | Low | Medium | Token never expires unless revoked. Detect `invalid_grant` error, prompt reconnect. |
 | `PAYMENT_CODE_SECRET` rotation breaks existing codes | Low | High | Never rotate secret in production. If rotated, all unverified codes become invalid. Document this clearly. |
 | Supabase webhook delivery failure | Low | Medium | Add retry logic in webhook handler. Supabase retries webhooks 3x by default. |
 | RLS misconfiguration exposes OAuth token | Medium | High | `admin_settings` restricted to authenticated users. Run RLS checklist before go-live. |
 | Cron job silently fails | Low | Medium | Log results to Supabase `sync_logs` table. Alert if no successful sync in 30 min. |
-| False positive — code appears in unrelated email | Very Low | Medium | Code has 32⁸ search space. Also: code only matches if a corresponding unpaid signup exists. |
+| False positive → code appears in unrelated email | Very Low | Medium | Code has 32⁸ search space. Also: code only matches if a corresponding unpaid signup exists. |
 
 ---
 
@@ -1009,7 +1009,7 @@ Google requires verification for apps using sensitive scopes (`gmail.readonly`) 
 
 | Metric | Target | Measurement |
 |--------|--------|-------------|
-| Data persistence | 100% — no loss on refresh | Manual test |
+| Data persistence | 100% → no loss on refresh | Manual test |
 | Payment auto-detection rate | > 90% of e-transfers auto-matched | `signups` table: `payment_verified_at not null` / total paid |
 | Time from e-transfer to auto-paid | ≤ 15 min (depends on cron) | Timestamp delta: Interac email received → `payment_verified_at` |
 | False positive rate | 0% | No paid = false where player didn't actually pay |
@@ -1026,9 +1026,9 @@ Google requires verification for apps using sensitive scopes (`gmail.readonly`) 
 |---|----------|-------|-----------|
 | Q1 | Which Gmail account receives Interac notifications? Is it the same as `etransfer` destination? | Organizer | Day 2, Hour 0 |
 | Q2 | Should code appear as player's e-transfer message or as reference number? (message is more reliable) | Team | Day 1, Hour 3 |
-| Q3 | Production domain — nymvolleyball.ca or *.vercel.app for v1? | Team | Day 1, Hour 4 |
+| Q3 | Production domain → nymvolleyball.ca or *.vercel.app for v1? | Team | Day 1, Hour 4 |
 | Q4 | Is the organizer's Google account a personal Gmail or Google Workspace? (affects OAuth flow slightly) | Organizer | Day 2, Hour 0 |
-| Q5 | Acceptable lag for auto-pay — 15 min (free cron) or 5 min (Vercel Pro, $20/mo)? | Team | Day 2, Hour 5 |
+| Q5 | Acceptable lag for auto-pay → 15 min (free cron) or 5 min (Vercel Pro, $20/mo)? | Team | Day 2, Hour 5 |
 | Q6 | If payment code is wrong (player types it wrong), who handles resolution? | Organizer | Before launch |
 
 ---

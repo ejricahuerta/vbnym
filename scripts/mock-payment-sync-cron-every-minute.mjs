@@ -4,9 +4,9 @@
  * (same contract as cron/src/index.ts and mock-payment-sync-cron.mjs).
  *
  * Env (see web/.env.example):
- *   PAYMENT_SYNC_CRON_TOKEN — required
- *   PAYMENT_SYNC_ENDPOINT   — optional, default http://localhost:3000/api/admin/payments/sync
- *   PAYMENT_SYNC_INTERVAL_MS — optional, default 60000 (1 minute)
+ *   PAYMENT_SYNC_CRON_TOKEN → required
+ *   PAYMENT_SYNC_ENDPOINT   → optional, default http://localhost:3000/api/admin/payments/sync
+ *   PAYMENT_SYNC_INTERVAL_MS → optional, default 60000 (1 minute)
  *
  * Run from web/:
  *   node --env-file=.env ../scripts/mock-payment-sync-cron-every-minute.mjs

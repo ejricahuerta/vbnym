@@ -130,7 +130,7 @@ function TonightCard({
               "border border-border bg-muted/40 text-muted-foreground"
             )}
           >
-            {left <= 0 ? "Full" : registrationNotYetOpen(game) ? "Soon" : "—"}
+            {left <= 0 ? "Full" : registrationNotYetOpen(game) ? "Soon" : "→"}
           </Button>
         ) : (
           <Button
@@ -190,7 +190,7 @@ export function GamesHome({
     return result;
   }, [gamesForVenue, query, view, dateFilter]);
 
-  /** Today’s runs (venue + search), earliest first — shown above filters when not already in “Tonight” list mode. */
+  /** Today’s runs (venue + search), earliest first → shown above filters when not already in “Tonight” list mode. */
   const tonightGames = useMemo(() => {
     if (view !== "list") return [];
     const candidates = gamesForVenue
@@ -247,7 +247,7 @@ export function GamesHome({
               : "max-w-3xl px-4 sm:px-6 lg:max-w-4xl xl:max-w-5xl"
           )}
         >
-          {/* Tonight — above filters (only when there are runs today; hidden when “Tonight” pill is on). */}
+          {/* Tonight → above filters (only when there are runs today; hidden when “Tonight” pill is on). */}
           {showTonightSpotlight ? (
             <section aria-labelledby="tonight-heading" className="space-y-2">
               <div className="flex items-baseline justify-between gap-3">
@@ -391,7 +391,7 @@ export function GamesHome({
             ) : listGames.length === 0 ? (
               <p className="text-center text-sm text-muted-foreground">
                 {showTonightSpotlight
-                  ? "No other upcoming games match this view — tonight\u2019s runs are above."
+                  ? "No other upcoming games match this view → tonight\u2019s runs are above."
                   : null}
               </p>
             ) : (

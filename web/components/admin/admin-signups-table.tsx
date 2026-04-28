@@ -91,9 +91,9 @@ function formatDayHeading(day: string): string {
 }
 
 function formatShortDate(iso: string | null | undefined): string {
-  if (!iso) return "—";
+  if (!iso) return "→";
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
+  if (Number.isNaN(d.getTime())) return "→";
   return d.toLocaleString(undefined, {
     month: "short",
     day: "numeric",
@@ -128,6 +128,46 @@ type Props = {
   gameById: Record<string, GameRow>;
 };
 
+type SortHeadProps = {
+  k: SortKey;
+  children: ReactNode;
+  className?: string;
+  sortKey: SortKey;
+  sortDir: SortDir;
+  onToggle: (key: SortKey) => void;
+};
+
+function SortHead({
+  k,
+  children,
+  className,
+  sortKey,
+  sortDir,
+  onToggle,
+}: SortHeadProps) {
+  const active = sortKey === k;
+  return (
+    <TableHead className={cn(className)}>
+      <button
+        type="button"
+        className="inline-flex items-center gap-1 font-medium hover:text-foreground"
+        onClick={() => onToggle(k)}
+      >
+        {children}
+        {active ? (
+          sortDir === "asc" ? (
+            <ArrowUp className="size-3.5 opacity-70" />
+          ) : (
+            <ArrowDown className="size-3.5 opacity-70" />
+          )
+        ) : (
+          <ChevronsUpDown className="size-3.5 opacity-40" />
+        )}
+      </button>
+    </TableHead>
+  );
+}
+
 export function AdminSignupsTable({ signups, gameById }: Props) {
   const [search, setSearch] = useState("");
   const [paidFilter, setPaidFilter] = useState<PaidFilter>("all");
@@ -157,6 +197,8 @@ export function AdminSignupsTable({ signups, gameById }: Props) {
   }, [sortKey]);
 
   useEffect(() => {
+    // Reset pagination when filtering/sorting options change.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPage(1);
   }, [search, paidFilter, gameFilter, groupBy, sortKey, sortDir, pageSize, colMode]);
 
@@ -289,54 +331,13 @@ export function AdminSignupsTable({ signups, gameById }: Props) {
     [sorted, start, effectivePageSize]
   );
 
-  useEffect(() => {
+  const visibleMobileExpanded = useMemo(() => {
     const allowed = new Set(pageRows.map((s) => s.id));
-    setMobileExpanded((prev) => {
-      let changed = false;
-      const next = new Set<string>();
-      for (const id of prev) {
-        if (allowed.has(id)) next.add(id);
-        else changed = true;
-      }
-      if (!changed && next.size === prev.size) return prev;
-      return next;
-    });
-  }, [pageRows]);
+    return new Set([...mobileExpanded].filter((id) => allowed.has(id)));
+  }, [mobileExpanded, pageRows]);
 
   const colCount =
     colMode === "essential" ? 6 : 11;
-
-  const SortHead = ({
-    k,
-    children,
-    className,
-  }: {
-    k: SortKey;
-    children: ReactNode;
-    className?: string;
-  }) => {
-    const active = sortKey === k;
-    return (
-      <TableHead className={cn(className)}>
-        <button
-          type="button"
-          className="inline-flex items-center gap-1 font-medium hover:text-foreground"
-          onClick={() => toggleSort(k)}
-        >
-          {children}
-          {active ? (
-            sortDir === "asc" ? (
-              <ArrowUp className="size-3.5 opacity-70" />
-            ) : (
-              <ArrowDown className="size-3.5 opacity-70" />
-            )
-          ) : (
-            <ChevronsUpDown className="size-3.5 opacity-40" />
-          )}
-        </button>
-      </TableHead>
-    );
-  };
 
   const tableBodyRows = useMemo(() => {
     if (pageRows.length === 0) return null;
@@ -375,7 +376,7 @@ export function AdminSignupsTable({ signups, gameById }: Props) {
                 </span>
               </>
             ) : (
-              <span className="text-muted-foreground">—</span>
+              <span className="text-muted-foreground">→</span>
             )}
           </TableCell>
           <TableCell>{s.name}</TableCell>
@@ -383,7 +384,7 @@ export function AdminSignupsTable({ signups, gameById }: Props) {
           {colMode === "all" ? (
             <>
               <TableCell className="max-w-[120px] truncate text-sm">
-                {s.phone ?? "—"}
+                {s.phone ?? "→"}
               </TableCell>
               <TableCell className="text-right tabular-nums">
                 {headsForSignup(s)}
@@ -398,14 +399,14 @@ export function AdminSignupsTable({ signups, gameById }: Props) {
                   </Badge>
                 ) : (
                   <Badge variant="secondary" className="font-normal">
-                    —
+                    →
                   </Badge>
                 )}
               </TableCell>
             </>
           ) : null}
           <TableCell className="font-mono text-xs">
-            {s.payment_code ?? "—"}
+            {s.payment_code ?? "→"}
           </TableCell>
           {colMode === "all" ? (
             <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
@@ -454,7 +455,7 @@ export function AdminSignupsTable({ signups, gameById }: Props) {
       const gameSummary = game
         ? `${game.location} · ${game.date}${court ? ` · ${court}` : ""}`
         : "Unknown game";
-      const open = mobileExpanded.has(s.id);
+      const open = visibleMobileExpanded.has(s.id);
 
       if (showHeader) {
         out.push(
@@ -493,7 +494,7 @@ export function AdminSignupsTable({ signups, gameById }: Props) {
               <p className="text-xs">{formatShortDate(s.created_at)}</p>
               <p className="line-clamp-2 text-xs">{gameSummary}</p>
               <p className="font-mono text-xs">
-                Code: {s.payment_code ?? "—"}
+                Code: {s.payment_code ?? "→"}
               </p>
             </div>
 
@@ -528,11 +529,11 @@ export function AdminSignupsTable({ signups, gameById }: Props) {
                 </MobileDetailRow>
                 <MobileDetailRow label="Game">{gameSummary}</MobileDetailRow>
                 <MobileDetailRow label="Payment code">
-                  <span className="font-mono">{s.payment_code ?? "—"}</span>
+                  <span className="font-mono">{s.payment_code ?? "→"}</span>
                 </MobileDetailRow>
                 {colMode === "all" ? (
                   <>
-                    <MobileDetailRow label="Phone">{s.phone ?? "—"}</MobileDetailRow>
+                    <MobileDetailRow label="Phone">{s.phone ?? "→"}</MobileDetailRow>
                     <MobileDetailRow label="Heads (incl. player)">
                       {headsForSignup(s)}
                     </MobileDetailRow>
@@ -543,7 +544,7 @@ export function AdminSignupsTable({ signups, gameById }: Props) {
                       {formatShortDate(s.payment_code_expires_at)}
                     </MobileDetailRow>
                     <MobileDetailRow label="Waiver">
-                      {s.waiver_accepted ? "Accepted" : "—"}
+                      {s.waiver_accepted ? "Accepted" : "→"}
                     </MobileDetailRow>
                   </>
                 ) : null}
@@ -565,7 +566,7 @@ export function AdminSignupsTable({ signups, gameById }: Props) {
     gameById,
     colMode,
     safePage,
-    mobileExpanded,
+    visibleMobileExpanded,
     toggleMobileDetail,
   ]);
 
@@ -887,24 +888,24 @@ export function AdminSignupsTable({ signups, gameById }: Props) {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <SortHead k="game">Game</SortHead>
-                    <SortHead k="name">Name</SortHead>
-                    <SortHead k="email">Email</SortHead>
+                    <SortHead k="game" sortKey={sortKey} sortDir={sortDir} onToggle={toggleSort}>Game</SortHead>
+                    <SortHead k="name" sortKey={sortKey} sortDir={sortDir} onToggle={toggleSort}>Name</SortHead>
+                    <SortHead k="email" sortKey={sortKey} sortDir={sortDir} onToggle={toggleSort}>Email</SortHead>
                     {colMode === "all" ? (
                       <>
                         <TableHead>Phone</TableHead>
                         <TableHead className="text-right">Heads</TableHead>
-                        <SortHead k="created_at" className="whitespace-nowrap">
+                        <SortHead k="created_at" className="whitespace-nowrap" sortKey={sortKey} sortDir={sortDir} onToggle={toggleSort}>
                           Signed up
                         </SortHead>
                         <TableHead>Waiver</TableHead>
                       </>
                     ) : null}
-                    <SortHead k="payment_code">Code</SortHead>
+                    <SortHead k="payment_code" sortKey={sortKey} sortDir={sortDir} onToggle={toggleSort}>Code</SortHead>
                     {colMode === "all" ? (
                       <TableHead className="whitespace-nowrap">Code expires</TableHead>
                     ) : null}
-                    <SortHead k="paid">Paid</SortHead>
+                    <SortHead k="paid" sortKey={sortKey} sortDir={sortDir} onToggle={toggleSort}>Paid</SortHead>
                     <TableHead className="w-[120px]">Action</TableHead>
                   </TableRow>
                 </TableHeader>

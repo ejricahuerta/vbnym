@@ -21,7 +21,7 @@ const STEPS: readonly {
   },
   {
     step: 3,
-    title: "Show up & play",
+    title: "Show up and play",
     body: "Payment is verified automatically. You'll get a confirmation email, and you're on the roster. Just show up on time.",
     Icon: PartyPopper,
   },

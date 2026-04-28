@@ -5,7 +5,13 @@ import { POST } from "@/app/api/cron/gmail-reauth-reminder/route";
 const maybeSendGmailReauthReminder = vi.hoisted(() =>
   vi.fn().mockResolvedValue({ ok: true, sent: 1, skipped: "sent" })
 );
-vi.mock("@/lib/gmail-reauth-reminder", () => ({ maybeSendGmailReauthReminder }));
+const maybeSendGameGmailReauthReminders = vi.hoisted(() =>
+  vi.fn().mockResolvedValue({ ok: true, sent: 0, skipped: "no_game_reminders_due" })
+);
+vi.mock("@/lib/gmail-reauth-reminder", () => ({
+  maybeSendGmailReauthReminder,
+  maybeSendGameGmailReauthReminders,
+}));
 
 const createAdminClient = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => createAdminClient() }));
@@ -35,6 +41,7 @@ describe("POST /api/cron/gmail-reauth-reminder", () => {
     const res = await POST(req);
     expect(res.status).toBe(200);
     expect(maybeSendGmailReauthReminder).toHaveBeenCalled();
+    expect(maybeSendGameGmailReauthReminders).toHaveBeenCalled();
     delete process.env.PAYMENT_SYNC_CRON_TOKEN;
   });
 });

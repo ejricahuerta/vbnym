@@ -17,7 +17,7 @@ type Props = {
   variant?: ButtonVariant;
   size?: ButtonSize;
   /**
-   * When set, this content is part of the same control as the copy icon — clicking
+   * When set, this content is part of the same control as the copy icon → clicking
    * the text copies `text` (e.g. full address line).
    */
   children?: ReactNode;

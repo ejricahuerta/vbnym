@@ -1,4 +1,4 @@
-# NYM Volleyball — Mock Design Generation PRD
+# NYM Volleyball → Mock Design Generation PRD
 
 **Scope:** Requirements for producing and maintaining **UI mocks** (static or lightly interactive) that precede or parallel implementation.  
 **Related:** [prd-v0.md](./prd-v0.md) (product + engineering). **Stack target for build:** Next.js App Router, shadcn/ui.  
@@ -41,7 +41,7 @@ Engineering needs **decision-grade visuals**: spacing, hierarchy, component boun
 | Artifact | Description |
 |----------|-------------|
 | **Static mock** | PNG (or SVG where vector helps), min. width **375px** (mobile) and optionally **1280px** desktop frame for the same screen. |
-| **Spec note** | Short markdown block in this PRD’s **Appendix — Screen inventory** *or* a sibling `docs/prds/mock-notes/<screen>.md` listing components, tokens, and edge states. |
+| **Spec note** | Short markdown block in this PRD’s **Appendix → Screen inventory** *or* a sibling `docs/prds/mock-notes/<screen>.md` listing components, tokens, and edge states. |
 | **Component map** | Table: UI region → shadcn component(s) → Lucide icons (if any). |
 
 ### 4.2 Optional artifacts
@@ -66,7 +66,7 @@ Mocks **must** be generatable and reviewable against these constraints so they d
 | Type | Sans: **Inter** or **Geist**; no decorative display fonts unless explicitly approved. |
 | Icons | **Lucide** only in mocks (same as shadcn defaults). |
 
-**Reference anchor:** Existing list mock: `docs/prds/assets/ui-reference-list-view.png` — new mocks should **visually harmonize** with it unless replacing it via changelog here.
+**Reference anchor:** Existing list mock: `docs/prds/assets/ui-reference-list-view.png` → new mocks should **visually harmonize** with it unless replacing it via changelog here.
 
 ---
 
@@ -81,7 +81,7 @@ docs/prds/assets/
 
 Examples:
 
-- `ui-reference-list-view.png` (canonical list — already exists)
+- `ui-reference-list-view.png` (canonical list → already exists)
 - `ui-reference-map-view.png`
 - `ui-reference-run-detail-sheet.png`
 - `ui-reference-signup-form.png`
@@ -117,7 +117,7 @@ Status: `done` | `needed` | `n/a` (track in Appendix when this PRD is used activ
 | Runs list (full run) | List | P0 | Badge “0 left”, disabled or waitlist CTA per product decision |
 | Map view chrome | Map | P0 | Same header + toggle; map area placeholder OK |
 | Join / signup | Modal or page | P0 | Fields per `prd-v0` signup model |
-| Confirmation (post-submit) | Page | P1 | Code copy block — align with email PRD |
+| Confirmation (post-submit) | Page | P1 | Code copy block → align with email PRD |
 | Admin login | Page | P1 | shadcn Form + Card |
 | Admin runs list / editor | Page | P1 | Table or Card list |
 | Admin signups + payment code column | Page | P1 | Table, Badge for paid |
@@ -175,7 +175,7 @@ Engineers implement from **`prd-v0.md`** + **this asset**; they do not re-interp
 
 ---
 
-## 11. Appendix — Changelog (this document)
+## 11. Appendix → Changelog (this document)
 
 | Version | Date | Changes |
 |---------|------|---------|
@@ -184,13 +184,13 @@ Engineers implement from **`prd-v0.md`** + **this asset**; they do not re-interp
 
 ---
 
-## 12. Appendix — Component map template
+## 12. Appendix → Component map template
 
 Copy per screen:
 
 | Region | shadcn | Lucide / notes |
 |--------|--------|----------------|
-| Example | `Card`, `CardHeader` | — |
+| Example | `Card`, `CardHeader` | → |
 | CTA | `Button` variant=`default` | `UserPlus` |
 
 ---

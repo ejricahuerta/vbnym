@@ -27,6 +27,30 @@ type OrganizerSignupRow = {
   payment_code_expires_at: string | null;
 };
 
+async function upsertGameEmailSyncFallbackPreference(
+  supabase: ServerSupabase,
+  gameId: string,
+  useUniversalFallback: boolean
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { data: existing, error: selErr } = await supabase
+    .from("game_email_sync_config")
+    .select("preferred_gmail_connection_id")
+    .eq("game_id", gameId)
+    .maybeSingle<{ preferred_gmail_connection_id: string | null }>();
+  if (selErr) return { ok: false, error: selErr.message };
+
+  const { error: upErr } = await supabase.from("game_email_sync_config").upsert(
+    {
+      game_id: gameId,
+      use_universal_fallback: useUniversalFallback,
+      preferred_gmail_connection_id: existing?.preferred_gmail_connection_id ?? null,
+    },
+    { onConflict: "game_id" }
+  );
+  if (upErr) return { ok: false, error: upErr.message };
+  return { ok: true };
+}
+
 /** Matches public roster visibility in `getGameWithSignups` (`isActiveSignup`). */
 function signupRowIsPublicActive(
   r: Pick<OrganizerSignupRow, "paid" | "payment_code_expires_at">
@@ -145,6 +169,15 @@ export async function createGame(
   const gameId = inserted?.id as string | undefined;
   if (!gameId) return { ok: false, error: "Game was not created." };
 
+  const syncPref = await upsertGameEmailSyncFallbackPreference(
+    supabase,
+    gameId,
+    parsed.data.gmail_use_universal_fallback
+  );
+  if (!syncPref.ok) {
+    return { ok: false, error: syncPref.error };
+  }
+
   if (parsed.data.admin_will_play && user.email) {
     const added = await ensureOrganizerSignupForGame(supabase, {
       gameId,
@@ -204,6 +237,15 @@ export async function updateGame(
     .eq("id", parsed.data.id);
 
   if (error) return { ok: false, error: error.message };
+
+  const syncPref = await upsertGameEmailSyncFallbackPreference(
+    supabase,
+    parsed.data.id,
+    parsed.data.gmail_use_universal_fallback
+  );
+  if (!syncPref.ok) {
+    return { ok: false, error: syncPref.error };
+  }
 
   if (parsed.data.admin_will_play && user.email) {
     const added = await ensureOrganizerSignupForGame(supabase, {

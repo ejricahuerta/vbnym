@@ -32,7 +32,10 @@ import {
   localDateTimeToISO,
   parseRegistrationOpensForPicker,
 } from "@/lib/registration-opens-input";
+import { ConnectGmailButton } from "@/components/admin/connect-gmail-button";
+import { GameGmailDisconnectButton } from "@/components/admin/game-gmail-disconnect-button";
 import { cn } from "@/lib/utils";
+import type { GameEmailSyncAdminView } from "@/types/game-email-sync";
 import type { Game, Venue } from "@/types/vbnym";
 
 const HOURS_0_23 = Array.from({ length: 24 }, (_, h) => h);
@@ -71,6 +74,10 @@ type Props = {
   placesLoadError: string | null;
   /** Edit flow: hide self-add when this admin is already a signup for the game. */
   adminAlreadySignedUp?: boolean;
+  /** When set (edit game), allow connecting a dedicated Gmail inbox for this run. */
+  gameId?: string;
+  /** Loaded on edit page for payment inbox UI. */
+  emailSync?: GameEmailSyncAdminView | null;
 };
 
 function AdminFormCollapsibleSection({
@@ -224,6 +231,8 @@ export function AdminGameFormFields({
   mapsKeyMissing,
   placesLoadError,
   adminAlreadySignedUp = false,
+  gameId,
+  emailSync = null,
 }: Props) {
   const d = defaults ?? {};
   const visibilityDefault = d.listed === false ? "invite" : "public";
@@ -286,7 +295,7 @@ export function AdminGameFormFields({
               }}
             >
               <SelectTrigger id="apply-saved-venue" className="w-full">
-                <SelectValue placeholder="None — type manually" />
+                <SelectValue placeholder="None → type manually" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={VENUE_NONE}>None (type manually)</SelectItem>
@@ -350,7 +359,7 @@ export function AdminGameFormFields({
         </div>
       </AdminFormCollapsibleSection>
 
-      <AdminFormCollapsibleSection title="Schedule & spots">
+      <AdminFormCollapsibleSection title="Schedule and spots">
         <div className="space-y-2 sm:col-span-2">
           <div className="space-y-4">
             <div className="space-y-2">
@@ -458,7 +467,7 @@ export function AdminGameFormFields({
                 htmlFor="admin-will-play"
                 className="cursor-pointer text-sm font-medium leading-snug text-foreground"
               >
-                I&apos;m playing — add me to the player list
+                I&apos;m playing → add me to the player list
               </label>
               <p className="text-xs text-muted-foreground">
                 One spot under your login email, marked paid (organizer). Waiver is
@@ -469,7 +478,7 @@ export function AdminGameFormFields({
         )}
       </AdminFormCollapsibleSection>
 
-      <AdminFormCollapsibleSection title="Payment & listing">
+      <AdminFormCollapsibleSection title="Payment and listing">
         <div className="space-y-2 sm:col-span-2">
           <Label htmlFor="etransfer">E-transfer email</Label>
           <Input
@@ -488,7 +497,7 @@ export function AdminGameFormFields({
               <SelectValue placeholder="Choose visibility" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="public">Public (on home map & list)</SelectItem>
+              <SelectItem value="public">Public (on home map and list)</SelectItem>
               <SelectItem value="invite">Invite-only (hidden from public)</SelectItem>
             </SelectContent>
           </Select>
@@ -652,7 +661,64 @@ export function AdminGameFormFields({
         </div>
       </AdminFormCollapsibleSection>
 
-      <AdminFormCollapsibleSection title="Directions & map pin">
+      <AdminFormCollapsibleSection title="Payment email (Gmail sync)" defaultOpen={Boolean(gameId)}>
+        <div className="space-y-3 sm:col-span-2">
+          <p className="text-sm text-muted-foreground">
+            Connect a Gmail inbox that receives Interac notifications for this game, or rely on the
+            universal admin Gmail (Admin → Payments). Matching uses the payment code only.
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              type="checkbox"
+              id="gmail_disable_universal_gmail_fallback"
+              name="gmail_disable_universal_gmail_fallback"
+              value="on"
+              defaultChecked={emailSync ? !emailSync.use_universal_fallback : false}
+              className="size-4 rounded border-input"
+            />
+            <Label htmlFor="gmail_disable_universal_gmail_fallback" className="font-normal">
+              Disable universal Gmail fallback (dedicated inbox only → must connect below)
+            </Label>
+          </div>
+          {gameId ? (
+            <div className="flex flex-col gap-3 rounded-md border border-border bg-background/50 p-3">
+              <div className="text-sm">
+                <span className="text-muted-foreground">Dedicated inbox: </span>
+                {emailSync?.connected_email ? (
+                  <span className="font-medium">
+                    {emailSync.connected_email}
+                    {emailSync.reauth_required ? (
+                      <span className="ms-2 text-destructive">(re-auth required)</span>
+                    ) : null}
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground">Not connected</span>
+                )}
+              </div>
+              {emailSync?.gmail_assumed_expires_at ? (
+                <p className="text-xs text-muted-foreground">
+                  Operational reconnect deadline:{" "}
+                  {new Date(emailSync.gmail_assumed_expires_at).toLocaleString()}
+                </p>
+              ) : null}
+              <div className="flex flex-wrap items-center gap-2">
+                <ConnectGmailButton mode="game" gameId={gameId} size="sm" variant="secondary">
+                  {emailSync?.connected_email ? "Reconnect game Gmail" : "Connect game Gmail"}
+                </ConnectGmailButton>
+                {emailSync?.preferred_gmail_connection_id ? (
+                  <GameGmailDisconnectButton gameId={gameId} />
+                ) : null}
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Save the game first, then edit it to connect a dedicated Gmail inbox for this run.
+            </p>
+          )}
+        </div>
+      </AdminFormCollapsibleSection>
+
+      <AdminFormCollapsibleSection title="Directions and map pin">
         <div className="space-y-2 sm:col-span-2">
           <Label htmlFor="entry_instructions">How to enter (optional)</Label>
           <Textarea

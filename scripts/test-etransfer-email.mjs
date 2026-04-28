@@ -1,5 +1,5 @@
 /**
- * Test script — sends a mock Interac e-transfer "Funds Deposited" email
+ * Test script → sends a mock Interac e-transfer "Funds Deposited" email
  * via Resend, styled to match a real Interac receipt.
  *
  * Usage:  node --env-file=.env ../scripts/test-etransfer-email.mjs

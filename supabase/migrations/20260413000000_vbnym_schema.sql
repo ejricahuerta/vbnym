@@ -1,4 +1,4 @@
--- NYM Volleyball — application tables in schema vbnym
+-- NYM Volleyball -> application tables in schema vbnym
 create schema if not exists vbnym;
 
 grant usage on schema vbnym to postgres, anon, authenticated, service_role;

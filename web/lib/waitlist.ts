@@ -78,7 +78,7 @@ function inviteEmailHtml(params: {
     <div style="margin:0;padding:24px;background:#f8fafc;font-family:Arial,sans-serif;color:#131b2e">
       <div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden">
         <div style="padding:18px 22px;background:#0f274f;color:#ffffff">
-          <div style="font-size:18px;font-weight:700;">North York | Markham Volleyball</div>
+          <div style="font-size:18px;font-weight:700;">6IX BACK Volleyball</div>
           <div style="margin-top:3px;font-size:12px;opacity:0.85;letter-spacing:1px;text-transform:uppercase">Waitlist Spot Opened</div>
         </div>
         <div style="padding:24px 22px">
@@ -135,7 +135,7 @@ function inviteEmailText(params: {
     `E-transfer email (copy exactly):`,
     params.etransfer,
     ``,
-    `Payment code — message field (copy exactly):`,
+    `Payment code → message field (copy exactly):`,
     params.paymentCode,
     ``,
     `Group size: ${params.groupSize}`,
@@ -173,7 +173,7 @@ function fullEmailHtml(params: {
     <div style="margin:0;padding:24px;background:#f8fafc;font-family:Arial,sans-serif;color:#131b2e">
       <div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden">
         <div style="padding:18px 22px;background:#0f274f;color:#ffffff">
-          <div style="font-size:18px;font-weight:700;">North York | Markham Volleyball</div>
+          <div style="font-size:18px;font-weight:700;">6IX BACK Volleyball</div>
           <div style="margin-top:3px;font-size:12px;opacity:0.85;letter-spacing:1px;text-transform:uppercase">Waitlist Update</div>
         </div>
         <div style="padding:24px 22px">
@@ -288,8 +288,8 @@ export async function enqueueWaitlistAndNotify(
   await sendTransactionalEmail({
     to: normalizedEmail,
     subject: allPaid
-      ? "NYM waitlist: game full (all paid)"
-      : "NYM waitlist: game currently full",
+      ? "6IX BACK waitlist: game full (all paid)"
+      : "6IX BACK waitlist: game currently full",
     html: fullEmailHtml(fullParams),
     text: fullEmailText(fullParams),
   });

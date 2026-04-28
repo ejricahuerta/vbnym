@@ -4,8 +4,8 @@
  * Same contract as cron/src/index.ts.
  *
  * Env (see web/.env.example):
- *   PAYMENT_SYNC_CRON_TOKEN — required
- *   PAYMENT_SYNC_ENDPOINT — optional, default http://localhost:3000/api/admin/payments/sync
+ *   PAYMENT_SYNC_CRON_TOKEN → required
+ *   PAYMENT_SYNC_ENDPOINT → optional, default http://localhost:3000/api/admin/payments/sync
  */
 
 const endpoint =

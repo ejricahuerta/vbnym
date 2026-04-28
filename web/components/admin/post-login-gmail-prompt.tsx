@@ -57,7 +57,7 @@ export function PostLoginGmailPrompt({
             Not now
           </Button>
           <Button asChild>
-            <a href="/api/admin/gmail/oauth/start">Connect Gmail</a>
+            <a href="/api/admin/gmail/oauth/start?mode=universal">Connect Gmail</a>
           </Button>
         </DialogFooter>
       </DialogContent>

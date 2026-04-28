@@ -5,7 +5,7 @@ type HomeHeroParallaxProps = {
   children: ReactNode;
 };
 
-/** Full-viewport hero with static background — same treatment as the featured venue (no scroll parallax). */
+/** Full-viewport hero with static background → same treatment as the featured venue (no scroll parallax). */
 export function HomeHeroParallax({ children }: HomeHeroParallaxProps) {
   return (
     <section className="relative -mt-14 min-h-dvh pt-14 sm:-mt-16 sm:pt-16">

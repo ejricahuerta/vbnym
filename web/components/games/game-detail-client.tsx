@@ -229,7 +229,7 @@ export function GameDetailClient({
               className="border border-primary-foreground/25 bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20 hover:text-primary-foreground"
             />
           </div>
-          <h1 className="font-heading text-3xl font-bold italic tracking-tight sm:text-4xl">
+          <h1 className="display text-4xl tracking-tight sm:text-5xl">
             {game.location}
           </h1>
           {courtLine ? <p className="mt-2 text-base font-semibold text-accent">{courtLine}</p> : null}
@@ -270,7 +270,7 @@ export function GameDetailClient({
               </div>
             ) : null}
           </div>
-          <p className="mt-6 text-xs font-semibold uppercase tracking-wider text-primary-foreground/60">
+          <p className="eyebrow mt-6 text-primary-foreground/60">
             Availability
           </p>
           <p className="text-2xl font-bold tracking-tight text-accent">
@@ -348,7 +348,7 @@ export function GameDetailClient({
                   <CircleCheck className="mt-0.5 size-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
                   <div className="min-w-0">
                     <p className="font-semibold text-emerald-900 dark:text-emerald-100">
-                      You&apos;re all set — payment confirmed
+                      You&apos;re all set → payment confirmed
                     </p>
                     <p className="mt-0.5 text-sm text-emerald-700 dark:text-emerald-300">
                       Just show up and play!
@@ -411,7 +411,7 @@ export function GameDetailClient({
               {!existingSignup.paid && existingSignup.payment_code ? (
                 <div className="space-y-3">
                   <div className="rounded-xl border bg-card p-4 shadow-sm">
-                    <p className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">Step 1 — Copy your payment code</p>
+                    <p className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">Step 1 → Copy your payment code</p>
                     <CopyTextButton
                       text={existingSignup.payment_code}
                       label="Copy payment code"
@@ -421,7 +421,7 @@ export function GameDetailClient({
                     </CopyTextButton>
                   </div>
                   <div className="rounded-xl border bg-card p-4 shadow-sm">
-                    <p className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">Step 2 — Send e-transfer to</p>
+                    <p className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">Step 2 → Send e-transfer to</p>
                     <CopyTextButton text={game.etransfer} label="Copy e-transfer email" className={etransferCopyRowClass}>
                       <span className="block truncate text-left">{game.etransfer}</span>
                     </CopyTextButton>
@@ -698,7 +698,7 @@ export function GameDetailClient({
                           setCancellationPolicyOpen(true);
                         }}
                       >
-                        cancellation & refund policy
+                        cancellation and refund policy
                       </button>
                       <label htmlFor="waiver" className="cursor-pointer">
                         .
@@ -754,7 +754,7 @@ export function GameDetailClient({
                           : "Add your email address to continue."}
                       </p>
                     ) : null}
-                    <p className="text-center text-xs text-muted-foreground">Secure registration · NYM Volleyball</p>
+                    <p className="text-center text-xs text-muted-foreground">Secure registration · 6IX BACK Volleyball</p>
                   </div>
                 </form>
               </div>
@@ -778,7 +778,7 @@ export function GameDetailClient({
 
               <div className="space-y-4">
                 <div className="rounded-xl border bg-card p-4 shadow-sm">
-                  <p className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">Step 1 — Copy your payment code</p>
+                  <p className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">Step 1 → Copy your payment code</p>
                   <CopyTextButton
                     text={result?.paymentCode ?? ""}
                     label="Copy payment code"
@@ -788,14 +788,14 @@ export function GameDetailClient({
                   </CopyTextButton>
                 </div>
                 <div className="rounded-xl border bg-card p-4 shadow-sm">
-                  <p className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">Step 2 — Send e-transfer to</p>
+                  <p className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">Step 2 → Send e-transfer to</p>
                   <CopyTextButton text={result?.etransfer ?? ""} label="Copy e-transfer email" className={etransferCopyRowClass}>
                     <span className="block truncate text-left">{result?.etransfer}</span>
                   </CopyTextButton>
                   <p className="mt-2 text-xs text-muted-foreground">Paste the payment code as the e-transfer message.</p>
                 </div>
                 <div className="rounded-xl border bg-card p-4 shadow-sm">
-                  <p className="mb-1 text-xs font-bold uppercase tracking-widest text-muted-foreground">Step 3 — Done</p>
+                  <p className="mb-1 text-xs font-bold uppercase tracking-widest text-muted-foreground">Step 3 → Done</p>
                   <p className="text-sm text-foreground">
                     Payment is verified automatically. You&apos;ll get a confirmation email once matched.
                   </p>
@@ -815,7 +815,7 @@ export function GameDetailClient({
                     className="mt-1 font-medium text-foreground underline underline-offset-2 hover:text-primary"
                     onClick={() => setCancellationPolicyOpen(true)}
                   >
-                    Full cancellation & refund details
+                    Full cancellation and refund details
                   </button>
                 </div>
               </details>

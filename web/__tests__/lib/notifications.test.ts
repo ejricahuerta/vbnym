@@ -89,6 +89,6 @@ describe("sendTransactionalEmail", () => {
     const { sendTransactionalEmail } = await import("@/lib/notifications");
     await sendTransactionalEmail({ to: "a@b.com", subject: "S", html: "h" });
     const body = JSON.parse(String(fetchSpy.mock.calls[0]?.[1]?.body));
-    expect(body.from).toBe("NYM Volleyball <nymvb@ednsy.com>");
+    expect(body.from).toBe("6IX BACK Volleyball <play@6ixback.com>");
   });
 });

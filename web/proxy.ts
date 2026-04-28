@@ -27,7 +27,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(dest);
   }
 
-  /** Do not refresh/read Supabase session here — it can clobber PKCE cookies before `exchangeCodeForSession`. */
+  /** Do not refresh/read Supabase session here → it can clobber PKCE cookies before `exchangeCodeForSession`. */
   if (path === "/auth/callback") {
     return NextResponse.next();
   }

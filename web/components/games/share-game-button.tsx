@@ -21,7 +21,7 @@ export function ShareGameButton({ gameId, gameTitle, ...rest }: Props) {
         await navigator.share(shareData);
         return;
       } catch {
-        /* user cancelled or not supported — fall through to clipboard */
+        /* user cancelled or not supported → fall through to clipboard */
       }
     }
 
