@@ -1,3 +1,20 @@
+# Deprecated: Cloudflare Cron
+
+This utility has been migrated to Vercel Cron in `app`.
+
+Current schedules are defined in `app/vercel.json`:
+
+- `* * * * *` → `/api/cron/gmail-sync`
+- `0 12 * * *` → `/api/cron/gmail-reauth-reminder`
+
+Authentication for both endpoints uses:
+
+- `Authorization: Bearer <CRON_SECRET>`
+
+Keep this folder only for historical reference.
+
+---
+
 # Cloudflare Cron for payment sync
 
 This Worker triggers the secure endpoint at:

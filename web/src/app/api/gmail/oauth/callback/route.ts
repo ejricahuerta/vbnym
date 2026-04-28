@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getHostSessionEmail } from "@/lib/auth";
 import { appOrigin } from "@/lib/env";
+import { decodeGmailOAuthState } from "@/lib/gmail";
 import { GMAIL_OAUTH_FLOW_COOKIE, hostGmailConnectionId } from "@/lib/host-gmail";
 import { createGoogleOAuthClient } from "@/lib/gmail";
 import { createServerSupabase } from "@/lib/supabase-server";
@@ -17,9 +18,14 @@ export async function GET(req: NextRequest): Promise<Response> {
 
   const url = new URL(req.url);
   const code = url.searchParams.get("code");
-  const state = url.searchParams.get("state");
+  const rawState = url.searchParams.get("state");
+  const parsedState = decodeGmailOAuthState(rawState);
   const cookieState = req.cookies.get("gmail_oauth_state")?.value;
-  if (!code || !state || state !== cookieState) {
+  const stateOk =
+    flow === "host"
+      ? Boolean(rawState && cookieState && rawState === cookieState)
+      : Boolean(parsedState?.csrf && cookieState && parsedState.csrf === cookieState);
+  if (!code || !stateOk) {
     const target = flow === "host" ? `${hostBase}?gmail=invalid-state` : `${adminBase}?gmail=invalid-state`;
     const res = NextResponse.redirect(target);
     res.cookies.set("gmail_oauth_state", "", { ...gmailOAuthCookieOpts(), maxAge: 0 });
@@ -69,17 +75,56 @@ export async function GET(req: NextRequest): Promise<Response> {
     return res;
   }
 
-  await supabase.from("gmail_connections").upsert(
-    {
-      id: "universal",
+  if (parsedState?.mode === "game" && parsedState.gameId) {
+    const payload = {
       connected_email: "oauth-connected",
       access_token: accessToken,
       refresh_token: refreshToken,
       expires_at: expiryDate,
       active: true,
-    },
-    { onConflict: "id" }
-  );
+    };
+    const { data: cfg } = await supabase
+      .from("game_email_sync_config")
+      .select("preferred_gmail_connection_id, use_universal_fallback")
+      .eq("game_id", parsedState.gameId)
+      .maybeSingle<{ preferred_gmail_connection_id: string | null; use_universal_fallback: boolean | null }>();
+
+    const existingConnectionId = cfg?.preferred_gmail_connection_id?.trim();
+    let selectedConnectionId = existingConnectionId ?? "";
+    if (existingConnectionId) {
+      await supabase.from("gmail_connections").update(payload).eq("id", existingConnectionId);
+    } else {
+      const inserted = await supabase
+        .from("gmail_connections")
+        .insert(payload)
+        .select("id")
+        .single<{ id: string }>();
+      selectedConnectionId = inserted.data?.id ?? "";
+    }
+
+    if (selectedConnectionId) {
+      await supabase.from("game_email_sync_config").upsert(
+        {
+          game_id: parsedState.gameId,
+          preferred_gmail_connection_id: selectedConnectionId,
+          use_universal_fallback: cfg?.use_universal_fallback !== false,
+        },
+        { onConflict: "game_id" }
+      );
+    }
+  } else {
+    await supabase.from("gmail_connections").upsert(
+      {
+        id: "universal",
+        connected_email: "oauth-connected",
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        expires_at: expiryDate,
+        active: true,
+      },
+      { onConflict: "id" }
+    );
+  }
 
   const res = NextResponse.redirect(`${adminBase}?gmail=connected`);
   res.cookies.set("gmail_oauth_state", "", { ...gmailOAuthCookieOpts(), maxAge: 0 });

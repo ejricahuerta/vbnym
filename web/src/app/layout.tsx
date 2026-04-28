@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import { Archivo, Archivo_Black, Fraunces, JetBrains_Mono } from "next/font/google";
 
 import { CookieConsentBanner } from "@/components/shared/CookieConsentBanner";
@@ -28,6 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       >
         {children}
         <CookieConsentBanner />
+        <Analytics />
       </body>
     </html>
   );
