@@ -93,7 +93,7 @@ export function CreateVenueForm({ embedded, onCreated }: Props = {}) {
           id="venue-name"
           name="name"
           required
-          placeholder="e.g. Markham Pan Am Centre — court 4"
+          placeholder="e.g. Markham Pan Am Centre → court 4"
         />
       </div>
       <div className="space-y-2 sm:col-span-2">
@@ -162,7 +162,7 @@ export function CreateVenueForm({ embedded, onCreated }: Props = {}) {
               />
               {!previewUrl && (
                 <p className="px-3 py-1.5 text-xs text-muted-foreground">
-                  Placeholder — add a URL above to preview the actual photo
+                  Placeholder → add a URL above to preview the actual photo
                 </p>
               )}
             </div>

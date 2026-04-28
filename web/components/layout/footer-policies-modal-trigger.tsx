@@ -12,7 +12,7 @@ export function FooterPoliciesModalTrigger() {
   return (
     <>
       <button type="button" className={linkClassName} onClick={() => setOpen(true)}>
-        Refunds & cancellations
+        Refunds and cancellations
       </button>
       <CancellationPolicyDialog open={open} onOpenChange={setOpen} />
     </>

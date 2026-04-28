@@ -43,7 +43,7 @@ export function HomeGameCard({
   imageUrl,
 }: {
   id: string;
-  /** Short label e.g. "Drop-In Game" — shown as a small pill (suffix " Game" is trimmed for display). */
+  /** Short label e.g. "Drop-In Game" → shown as a small pill (suffix " Game" is trimmed for display). */
   tag: string;
   time: string;
   day: string;
@@ -158,7 +158,7 @@ export function HomeGameCard({
 
           <div className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
             <span className="font-semibold text-primary">
-              {Number.isFinite(price) ? `$${price.toFixed(0)}` : "—"}
+              {Number.isFinite(price) ? `$${price.toFixed(0)}` : "→"}
               <span className="font-medium text-muted-foreground"> /person</span>
             </span>
             <span className="text-border" aria-hidden>

@@ -32,7 +32,7 @@ const MOCK_GAMES: Game[] = [
     etransfer: "volley@nymvb.ca",
     listed: true,
     registration_opens_at: null,
-    entry_instructions: "Beach volleyball courts — south end of the park.",
+    entry_instructions: "Beach volleyball courts → south end of the park.",
     court: "2",
   },
   {
@@ -62,7 +62,7 @@ const MOCK_SIGNUPS: Signup[] = [
     email: "alex@example.com",
     paid: true,
     friends: [],
-    payment_code: "NYM-AAAA-BBBB",
+    payment_code: "6IX-AAAA-BBBB",
   },
   {
     id: "10000000-0000-4000-8000-000000000002",
@@ -71,7 +71,7 @@ const MOCK_SIGNUPS: Signup[] = [
     email: "jordan@example.com",
     paid: false,
     friends: ["Sam K.", "Riley P."],
-    payment_code: "NYM-CCCC-DDDD",
+    payment_code: "6IX-CCCC-DDDD",
   },
 ];
 
@@ -284,5 +284,23 @@ export const listGamesForAdmin = cache(
       err = e instanceof Error ? e.message : "Could not load games.";
     }
     return { games, error: err };
+  }
+);
+
+/** Recent games for league fixture linking (admin). */
+export const listRecentGamesForAdmin = cache(
+  async (limit: number = 40): Promise<Game[]> => {
+    try {
+      const supabase = await createClient();
+      const { data, error } = await supabase
+        .from("games")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(limit);
+      if (error) return [];
+      return ((data ?? []) as Game[]).map(normalizeGame);
+    } catch {
+      return [];
+    }
   }
 );

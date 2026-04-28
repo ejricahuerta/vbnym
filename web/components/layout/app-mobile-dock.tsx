@@ -31,7 +31,7 @@ function DockLink({
       href={href}
       className={cn(
         "flex min-h-[3.5rem] min-w-0 flex-1 flex-col items-center justify-end gap-1 px-1 pb-2.5 pt-2 text-[0.6875rem] font-semibold leading-none tracking-tight transition-colors",
-        isActive ? "text-accent" : "text-app-chrome-muted hover:text-footer-foreground/90"
+        isActive ? "text-accent" : "text-muted-foreground hover:text-foreground"
       )}
       aria-current={isActive ? "page" : undefined}
     >
@@ -62,7 +62,7 @@ export function AppMobileDock() {
       <div
         className={cn(
           "pointer-events-auto mx-auto flex max-w-lg items-stretch justify-around",
-          "rounded-2xl border border-white/10 bg-app-chrome-bg/98 shadow-lg backdrop-blur-lg"
+          "rounded-lg border-2 border-border bg-background/98 backdrop-blur-lg"
         )}
       >
         <DockLink href="/app" label="Home" icon={Home} isActive={current === "home"} />

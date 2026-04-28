@@ -6,14 +6,14 @@ export function AppShellMobileHeader() {
   const weekday = new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(new Date());
 
   return (
-    <div className="border-b border-white/10 bg-app-chrome-bg px-4 pb-4 pt-[calc(0.75rem+env(safe-area-inset-top))] sm:px-5">
+    <div className="border-b-2 border-border bg-background px-4 pb-4 pt-[calc(0.75rem+env(safe-area-inset-top))] sm:px-5">
       <div className="mx-auto flex w-full max-w-lg flex-col gap-4">
         <div>
-          <p className="font-heading text-2xl font-bold tracking-tight text-footer-foreground">
-            Hey there!
+          <p className="font-heading text-2xl font-bold tracking-tight text-foreground">
+            6IX BACK
           </p>
-          <p className="mt-1 text-sm font-medium text-app-chrome-muted">
-            {weekday} · North York & Markham
+          <p className="mt-1 text-sm font-medium text-muted-foreground">
+            {weekday} · Toronto and GTA
           </p>
         </div>
         <Suspense fallback={null}>

@@ -8,17 +8,20 @@ import { Button } from "@/components/ui/button";
 import { SubmitSpinner } from "@/components/ui/submit-spinner";
 import { Card } from "@/components/ui/card";
 import { useGooglePlacesAutocomplete } from "@/hooks/use-google-places-autocomplete";
+import type { GameEmailSyncAdminView } from "@/types/game-email-sync";
 import type { Game, Venue } from "@/types/vbnym";
 
 export function EditGameForm({
   game,
   venues = [],
   adminAlreadySignedUp = false,
+  emailSync,
 }: {
   game: Game;
   venues?: Venue[];
   /** True when the signed-in admin already has a signup row for this game. */
   adminAlreadySignedUp?: boolean;
+  emailSync: GameEmailSyncAdminView;
 }) {
   const [msg, setMsg] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -79,6 +82,8 @@ export function EditGameForm({
               mapsKeyMissing={mapsKeyMissing}
               placesLoadError={placesLoadError}
               adminAlreadySignedUp={adminAlreadySignedUp}
+              gameId={game.id}
+              emailSync={emailSync}
             />
           </div>
         </div>

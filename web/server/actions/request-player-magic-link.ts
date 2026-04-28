@@ -57,7 +57,7 @@ export async function requestPlayerMagicLink(
   const origin = publicSiteOrigin();
   const link = `${origin}/app/my-games/recover?t=${encodeURIComponent(token)}`;
 
-  const subject = "Your NYM Volleyball games — sign-in link";
+  const subject = "Your 6IX BACK Volleyball games → sign-in link";
   const html = `
     <p>Hi,</p>
     <p>Tap the button below to open <strong>My games</strong> in your browser. This link expires in about ${minutes} minutes.</p>

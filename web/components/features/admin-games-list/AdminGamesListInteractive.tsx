@@ -208,7 +208,7 @@ export function AdminGamesListInteractive({
                       <TableCell className="max-w-[10rem] whitespace-normal lg:max-w-xs">
                         {game.location}
                       </TableCell>
-                      <TableCell className="text-muted-foreground">{court || "—"}</TableCell>
+                      <TableCell className="text-muted-foreground">{court || "→"}</TableCell>
                       <TableCell className="text-right tabular-nums">{game.cap}</TableCell>
                       <TableCell className="text-right tabular-nums">
                         ${Number(game.price).toFixed(2)}

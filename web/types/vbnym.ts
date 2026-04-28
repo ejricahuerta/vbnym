@@ -34,7 +34,7 @@ export type Game = {
   listed?: boolean | null;
   /** When set and in the future, join is disabled until this instant. */
   registration_opens_at?: string | null;
-  /** Optional: door, gate, court, parking — shown on the public run page. */
+  /** Optional: door, gate, court, parking → shown on the public run page. */
   entry_instructions?: string | null;
   /** Hydrated from linked venue for public listings (not stored on games row). */
   venue_image_url?: string | null;

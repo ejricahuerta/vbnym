@@ -23,7 +23,7 @@ export async function sendTransactionalEmailResult(
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const resendKey = process.env.RESEND_API_KEY?.trim();
   const from =
-    process.env.RESEND_FROM_EMAIL?.trim() ?? "NYM Volleyball <nymvb@ednsy.com>";
+    process.env.RESEND_FROM_EMAIL?.trim() ?? "6IX BACK Volleyball <play@6ixback.com>";
   if (!resendKey) {
     return { ok: false, error: "Email is not configured (missing RESEND_API_KEY)." };
   }

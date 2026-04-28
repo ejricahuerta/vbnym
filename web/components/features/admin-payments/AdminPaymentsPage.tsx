@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isAllowedAdminEmail } from "@/lib/auth";
 import { GmailDisconnectButton } from "@/components/admin/gmail-disconnect-button";
 import { PaymentSyncPanel } from "@/components/admin/payment-sync-panel";
+import { SixBackSection } from "@/components/shared/SixBackPageShell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getAdminPaymentSettingsRow } from "@/server/queries/admin-settings";
@@ -24,7 +25,7 @@ export async function AdminPaymentsPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Payment sync</h1>
+        <h1 className="display text-4xl">Payment Sync</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Admin-triggered Gmail sync maps payment codes from emails to pending players and marks
           matching signups paid.
@@ -58,9 +59,9 @@ export async function AdminPaymentsPage({
         </Card>
       ) : null}
 
-      <Card className="space-y-4 p-6">
+      <SixBackSection title="Gmail OAuth" eyebrow="Payments" className="mt-0">
         <div className="space-y-1">
-          <h2 className="text-base font-semibold">Gmail OAuth</h2>
+          <h2 className="text-base font-semibold">Connected mailbox</h2>
           <p className="text-sm text-muted-foreground">
             Connected account: {settings?.gmail_connected_email ?? "Not connected"}
           </p>
@@ -68,12 +69,12 @@ export async function AdminPaymentsPage({
             Connected at:{" "}
             {settings?.gmail_connected_at
               ? new Date(settings.gmail_connected_at).toLocaleString()
-              : "—"}
+              : "→"}
           </p>
         </div>
         <div className="flex items-center gap-3">
           <Button asChild disabled={!allowlisted}>
-            <a href="/api/admin/gmail/oauth/start">
+            <a href="/api/admin/gmail/oauth/start?mode=universal">
               {settings?.gmail_connected_email ? "Reconnect Gmail OAuth" : "Connect Gmail OAuth"}
             </a>
           </Button>
@@ -81,11 +82,11 @@ export async function AdminPaymentsPage({
             <GmailDisconnectButton />
           ) : null}
         </div>
-      </Card>
+      </SixBackSection>
 
-      <Card className="space-y-4 p-6">
+      <SixBackSection title="Trigger Secure Sync" eyebrow="Payments" className="mt-0">
         <div className="space-y-1">
-          <h2 className="text-base font-semibold">Trigger secure sync</h2>
+          <h2 className="text-base font-semibold">Manual sync run</h2>
           <p className="text-sm text-muted-foreground">
             Last sync:{" "}
             {settings?.last_synced_at ? new Date(settings.last_synced_at).toLocaleString() : "Never"}
@@ -95,7 +96,7 @@ export async function AdminPaymentsPage({
           </p>
         </div>
         {allowlisted ? <PaymentSyncPanel /> : null}
-      </Card>
+      </SixBackSection>
     </div>
   );
 }

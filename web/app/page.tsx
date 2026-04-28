@@ -1,5 +1,5 @@
-import { HomeMarketingPage } from "@/components/features/home-marketing/HomeMarketingPage";
+import { HomeReferencePage } from "@/components/features/home-marketing/HomeReferencePage";
 
 export default function Page() {
-  return <HomeMarketingPage />;
+  return <HomeReferencePage />;
 }

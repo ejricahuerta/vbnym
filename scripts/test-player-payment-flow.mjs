@@ -11,7 +11,7 @@
  * Limitation: real Interac notifications usually come From noreply@…interac…,
  * not the player’s Gmail, so sync will not match unless the inbox receives a
  * message whose From is the player (e.g. player composes mail from Gmail, or a
- * forward that preserves the original sender in a way Gmail still exposes—rare).
+ * forward that preserves the original sender in a way Gmail still exposes (rare).
  *
  * Usage (from web/):
  *   node --env-file=.env ../scripts/test-player-payment-flow.mjs           # print verification only
@@ -20,10 +20,10 @@
  *   node --env-file=.env ../scripts/test-player-payment-flow.mjs --seed --sync
  *
  * Env:
- *   TEST_FLOW_GAME_ID   — optional UUID; default: first listed game
- *   TEST_FLOW_NAME      — default "Ed Test"
- *   TEST_FLOW_EMAIL     — default exricahuerta@gmail.com
- *   ADMIN_INBOX_EMAIL   — default edmel@ednsy.com (shown in instructions only)
+ *   TEST_FLOW_GAME_ID   → optional UUID; default: first listed game
+ *   TEST_FLOW_NAME      → default "Ed Test"
+ *   TEST_FLOW_EMAIL     → default exricahuerta@gmail.com
+ *   ADMIN_INBOX_EMAIL   → default edmel@ednsy.com (shown in instructions only)
  */
 
 import crypto from "node:crypto";
@@ -91,13 +91,13 @@ function printVerification() {
 === Verification: does the app match your described flow? ===
 
 1) User joins a game → receives email with payment code
-   YES — web/actions/signup.ts sends Resend mail with payment_code after insert.
+   YES → web/actions/signup.ts sends Resend mail with payment_code after insert.
 
 2) User sends e-transfer to admin (${ADMIN_INBOX})
-   OUT OF BAND — banking / Interac; not implemented in code.
+   OUT OF BAND → banking / Interac; not implemented in code.
 
 3) App reads Gmail, searches e-transfers, keywords player name
-   PARTIAL / NO — web/lib/gmail-sync.ts uses Gmail query:
+   PARTIAL / NO → web/lib/gmail-sync.ts uses Gmail query:
      newer_than:30d "NYM-"
    It does NOT search for "e-transfer" or the player’s display name.
    It scans Subject + Snippet for NYM-XXXX-XXXX pattern only.
@@ -283,7 +283,7 @@ async function seedSignupAndEmailPlayer() {
           <p style="margin:0 0 18px"><a href="${gameUrl}" style="display:inline-block;background:#0f274f;color:#fff;padding:11px 16px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">View game details</a></p>
           <div style="margin-top:20px;padding:16px;background:#f1f5f9;border-radius:12px;border:1px solid #e2e8f0">
             <p style="margin:0 0 10px;font-size:13px;color:#334155;line-height:1.55">
-              <strong>Payment sync test</strong> — send mail <strong>from this Gmail account</strong> to <strong>${ADMIN_INBOX}</strong> with the code in the subject so the app can mark you paid.
+              <strong>Payment sync test</strong> → send mail <strong>from this Gmail account</strong> to <strong>${ADMIN_INBOX}</strong> with the code in the subject so the app can mark you paid.
             </p>
             <a href="${gmailPlayerUrl}" style="display:inline-block;background:#1a73e8;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;margin-right:8px;margin-bottom:8px">Sign in to Gmail &amp; open compose</a>
             <a href="${gmailComposeOnlyUrl}" style="display:inline-block;background:#fff;color:#1a73e8;padding:11px 18px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;border:2px solid #1a73e8">Compose only (already signed in)</a>
@@ -302,7 +302,7 @@ async function seedSignupAndEmailPlayer() {
     body: JSON.stringify({
       from,
       to: [email],
-      subject: `NYM Volleyball — pay for ${game.location} (test)`,
+      subject: `NYM Volleyball → pay for ${game.location} (test)`,
       html,
     }),
   });

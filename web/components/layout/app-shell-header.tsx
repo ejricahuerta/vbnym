@@ -6,10 +6,11 @@ import { AppShellDesktopNav } from "@/components/layout/app-shell-desktop-nav";
 import { AppShellGamesSearch } from "@/components/layout/app-shell-games-search";
 import { AppShellGamesViewToggle } from "@/components/layout/app-shell-games-view-toggle";
 import { AppShellMobileHeader } from "@/components/layout/app-shell-mobile-header";
+import { SixBackLogo } from "@/components/shared/SixBackLogo";
 
 export function AppShellHeader() {
   return (
-    <header className="sticky top-0 z-40 bg-app-chrome-bg pt-[env(safe-area-inset-top)] text-footer-foreground backdrop-blur-md lg:border-b lg:border-white/10">
+    <header className="sticky top-0 z-40 border-b-2 border-border bg-background pt-[env(safe-area-inset-top)] text-foreground backdrop-blur-md">
       <div className="lg:hidden">
         <AppShellMobileHeader />
       </div>
@@ -19,25 +20,10 @@ export function AppShellHeader() {
           <Button
             variant="ghost"
             asChild
-            className="h-auto min-w-0 shrink-0 justify-start gap-3 px-1 py-1.5 text-left text-footer-foreground shadow-none hover:bg-white/5 hover:text-footer-foreground"
+            className="h-auto min-w-0 shrink-0 justify-start gap-3 px-1 py-1.5 text-left text-foreground shadow-none hover:bg-muted/70 hover:text-foreground"
           >
             <Link href="/app" className="flex min-w-0 items-center gap-3">
-              <span
-                className="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent text-[0.8125rem] font-bold leading-none text-accent-foreground"
-                aria-hidden
-              >
-                VB
-              </span>
-              <span className="min-w-0 flex flex-col leading-tight">
-                <span className="font-heading text-base font-bold tracking-tight sm:text-lg">
-                  <span className="block truncate sm:max-w-none" title="North York & Markham">
-                    NY & Markham
-                  </span>
-                </span>
-                <span className="mt-0.5 text-xs font-medium text-app-chrome-muted sm:text-[0.8125rem]">
-                  Volleyball Community
-                </span>
-              </span>
+              <SixBackLogo showWordmark />
             </Link>
           </Button>
 
@@ -58,7 +44,7 @@ export function AppShellHeader() {
           <Button
             asChild
             size="sm"
-            className="h-10 shrink-0 gap-1 rounded-full bg-accent px-5 text-sm font-bold text-accent-foreground shadow-none hover:bg-accent/90"
+            className="h-10 shrink-0 gap-1 rounded-md bg-accent px-5 text-sm font-bold text-accent-foreground"
           >
             <Link href="/app/my-games" className="flex items-center gap-1">
               <CalendarDays className="size-4 shrink-0 stroke-[2.5]" aria-hidden />

@@ -3,6 +3,7 @@ import { listGamesForAdmin } from "@/server/queries/games";
 import { getVenues } from "@/server/queries/venues";
 import { CreateGameModal } from "@/components/admin/create-game-modal";
 import { CreateVenueModal } from "@/components/admin/create-venue-modal";
+import { SixBackSection } from "@/components/shared/SixBackPageShell";
 import { Card, CardContent } from "@/components/ui/card";
 import { AdminGamesListInteractive } from "@/components/features/admin-games-list/AdminGamesListInteractive";
 import { venueImageOrPlaceholder } from "@/lib/venue-placeholder-image";
@@ -33,7 +34,7 @@ export async function AdminGamesListPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Games</h1>
+          <h1 className="display text-4xl">Games</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Edit or delete scheduled games. Public home shows upcoming public games.
           </p>
@@ -44,7 +45,7 @@ export async function AdminGamesListPage() {
         </div>
       </div>
 
-      <div className="min-w-0 space-y-6">
+      <SixBackSection title="Schedule Control" eyebrow="Admin" className="mt-0 min-w-0 space-y-6">
         {err ? (
           <Card size="sm" className="border-destructive/30 bg-destructive/10 py-3 text-destructive shadow-none">
             <CardContent className="px-3 py-0 text-sm">{err}</CardContent>
@@ -63,7 +64,7 @@ export async function AdminGamesListPage() {
             referenceTimeMs={referenceTimeMs}
           />
         ) : null}
-      </div>
+      </SixBackSection>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-# Architecture Guide — Next.js App Router + shadcn/ui
+# Architecture Guide → Next.js App Router + shadcn/ui
 
 > Single source of truth for project structure, patterns, and conventions.  
 > Every file, component, and data-flow decision should be traceable back to this document.
@@ -29,9 +29,9 @@ In this monorepo, the live Next.js application root is **`web/`** (not `src/` at
 | Principle | What it means in practice |
 |---|---|
 | **Server-first** | Default to React Server Components. Add `'use client'` only when the component needs browser APIs, event handlers, or local state. |
-| **Thin routes** | `page.tsx` and `layout.tsx` files import one component and nothing else. Zero business logic. |
-| **Co-locate by feature** | A feature's component, hook, schema, and action live in the same folder — not scattered across top-level directories by file type. |
-| **Zod as source of truth** | Every shape that crosses a boundary (form → action, API → component) is defined once as a Zod schema. TypeScript types are derived from it — never written by hand. |
+| **Thin routes** | `page.tsx` files should import/render one feature component (or redirect/notFound only). `layout.tsx` should stay mostly compositional and may load lightweight shell/session data needed for shared chrome. |
+| **Co-locate by feature** | A feature's component, hook, schema, and action live in the same folder → not scattered across top-level directories by file type. |
+| **Zod as source of truth** | Every shape that crosses a boundary (form → action, API → component) is defined once as a Zod schema. TypeScript types are derived from it → never written by hand. |
 | **Separation of concerns** | Reads (queries), writes (actions), presentation (components), and logic (hooks) are distinct files with single responsibilities. |
 | **No premature abstraction** | Don't generalise until a pattern appears twice. Duplicate once, abstract the second time. |
 
@@ -41,10 +41,10 @@ In this monorepo, the live Next.js application root is **`web/`** (not `src/` at
 
 ```
 src/
-├── app/                          # Routing layer ONLY — no business logic
-│   ├── (auth)/                   # Route group — no URL segment
+├── app/                          # Routing layer ONLY → no business logic
+│   ├── (auth)/                   # Route group → no URL segment
 │   │   ├── login/
-│   │   │   ├── page.tsx          # Imports <LoginPage /> — nothing else
+│   │   │   ├── page.tsx          # Imports <LoginPage /> → nothing else
 │   │   │   └── loading.tsx
 │   │   └── layout.tsx
 │   ├── (dashboard)/
@@ -53,15 +53,15 @@ src/
 │   │   │   ├── loading.tsx
 │   │   │   └── error.tsx
 │   │   └── layout.tsx
-│   ├── api/                      # Route handlers — keep minimal
+│   ├── api/                      # Route handlers → keep minimal
 │   │   └── webhooks/
 │   │       └── route.ts
-│   ├── globals.css               # Design tokens & Tailwind base — only file allowed to define CSS vars
+│   ├── globals.css               # Design tokens & Tailwind base → only file allowed to define CSS vars
 │   ├── layout.tsx                # Root layout
 │   └── page.tsx
 │
 ├── components/
-│   ├── ui/                       # shadcn primitives — NEVER edit directly
+│   ├── ui/                       # shadcn primitives → NEVER edit directly
 │   │   ├── button.tsx
 │   │   ├── input.tsx
 │   │   └── ...
@@ -80,10 +80,10 @@ src/
 │       └── AppButton.tsx
 │
 ├── server/
-│   ├── actions/                  # Server actions — mutations only
+│   ├── actions/                  # Server actions → mutations only
 │   │   ├── users.ts
 │   │   └── posts.ts
-│   └── queries/                  # Data fetching — reads only
+│   └── queries/                  # Data fetching → reads only
 │       ├── users.ts
 │       └── posts.ts
 │
@@ -108,9 +108,10 @@ src/
 
 ### Rules
 
-- **`app/`** contains only route files (`page.tsx`, `layout.tsx`, `loading.tsx`, `error.tsx`, `route.ts`). No components, no hooks, no utilities live here.
+- **`app/`** contains only route files (`page.tsx`, `layout.tsx`, `loading.tsx`, `error.tsx`, `route.ts`). No reusable components, hooks, or utilities live here.
+- **Route thinness:** keep business/domain logic in feature components, server queries, and server actions. `page.tsx` should generally delegate; `layout.tsx` may perform minimal shared-shell reads (for nav/auth chrome).
 - **`components/ui/`** is treated as a vendored dependency. Run `npx shadcn@latest add` to populate it; never modify files inside it by hand.
-- **`components/features/`** groups files by domain. A feature folder owns its own hook, schema, and action imports — it does not import from another feature folder.
+- **`components/features/`** groups files by domain. A feature folder owns its own hook, schema, and action imports → it does not import from another feature folder.
 - **`server/`** is server-only. Nothing in this directory may be imported by a client component. Mark files with `import 'server-only'` from the `server-only` package.
 - **`hooks/`** at root level is for hooks shared across features. Feature-specific hooks live in their feature folder.
 
@@ -120,14 +121,14 @@ src/
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                     Route files                      │  app/ — routing only
+│                     Route files                      │  app/ → routing only
 │               page.tsx  layout.tsx                   │
 └───────────────────────┬─────────────────────────────┘
                         │ imports
 ┌───────────────────────▼─────────────────────────────┐
 │               Feature / Page components              │  components/features/
 │           LoginPage  DashboardPage  etc.             │
-│  (RSC — composes server queries + client sub-trees)  │
+│  (RSC → composes server queries + client sub-trees)  │
 └───────────┬───────────────────────┬─────────────────┘
             │ calls                 │ renders
 ┌───────────▼──────────┐  ┌────────▼────────────────┐
@@ -147,7 +148,7 @@ src/
 - **Purpose:** Read data. Return typed values. No side effects.
 - **Rules:**
   - Always wrap with `react`'s `cache()` to deduplicate within a request.
-  - Return `null` or an empty array on not-found — never throw for empty data.
+  - Return `null` or an empty array on not-found → never throw for empty data.
   - Accept only plain, serialisable arguments.
 
 ```ts
@@ -171,7 +172,7 @@ export const getUsers = cache(async (): Promise<User[]> => {
 - **Purpose:** Mutate data. Validate input. Revalidate cache. Return a typed result.
 - **Rules:**
   - Always validate with Zod before touching the database.
-  - Always return a typed `ActionResult<T>` — never throw to the client.
+  - Always return a typed `ActionResult<T>` → never throw to the client.
   - Call `revalidatePath()` or `revalidateTag()` after successful mutation.
   - Check authentication/authorisation at the top of every action.
 
@@ -393,7 +394,7 @@ export function useAsyncAction<T>(
 ### 5.1 Server-side (RSC)
 
 ```tsx
-// Parallel fetches — never sequential when data is independent
+// Parallel fetches → never sequential when data is independent
 export async function DashboardPage() {
   const [user, stats, posts] = await Promise.all([
     getUser(),
@@ -506,7 +507,7 @@ export const userUpdateSchema = userSchema
   .partial()
   .refine((d) => Object.keys(d).length > 0, 'At least one field required')
 
-// Derive types — never write them by hand
+// Derive types → never write them by hand
 export type User       = z.infer<typeof userSchema>
 export type UserUpdate = z.infer<typeof userUpdateSchema>
 ```
@@ -525,7 +526,7 @@ export type AsyncActionResult<T = void> = Promise<ActionResult<T>>
 ### 6.3 Extending HTML elements
 
 ```ts
-// Extend native elements — preserve all native props
+// Extend native elements → preserve all native props
 type ButtonProps = React.ComponentPropsWithoutRef<'button'> & {
   variant?:   'default' | 'ghost' | 'destructive'
   isLoading?: boolean
@@ -564,7 +565,7 @@ function renderState<T>(state: FetchState<T>) {
 
 ### 6.5 Path aliases
 
-Always use path aliases — never relative `../../` imports.
+Always use path aliases → never relative `../../` imports.
 
 ```jsonc
 // tsconfig.json
@@ -631,7 +632,7 @@ export function AppButton({
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 
-// Always use cn() — never template literals for conditional Tailwind classes
+// Always use cn() → never template literals for conditional Tailwind classes
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
@@ -717,33 +718,28 @@ app/
     └── profile/
 ```
 
-### Middleware
+### Edge route guard (`proxy.ts` / `middleware.ts`)
 
-Auth protection lives in `middleware.ts` — not in individual pages.
+Auth protection must be centralized at the edge guard layer → not duplicated in individual pages.  
+In this codebase, the guard currently lives in `proxy.ts`.
 
 ```ts
-// middleware.ts
-import { auth } from '@/lib/auth'
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+// proxy.ts (current project pattern)
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { isAuthorizedAdmin } from "./lib/auth";
 
-const PUBLIC_PATHS = ['/login', '/register']
-
-export async function middleware(req: NextRequest) {
-  const session = await auth()
-  const isPublic = PUBLIC_PATHS.some((p) => req.nextUrl.pathname.startsWith(p))
-
-  if (!session && !isPublic) {
-    return NextResponse.redirect(new URL('/login', req.url))
+export async function proxy(request: NextRequest) {
+  const path = request.nextUrl.pathname;
+  // ... session lookup omitted
+  if (path.startsWith("/admin") && !path.startsWith("/admin/login")) {
+    // ... redirect unauthenticated/unauthorized users
   }
-
-  return NextResponse.next()
-}
-
-export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+  return NextResponse.next();
 }
 ```
+
+If the project later migrates to `middleware.ts`, keep the same principle: one centralized edge guard with explicit public/private matcher rules.
 
 ---
 
@@ -849,7 +845,7 @@ describe('userUpdateSchema', () => {
 | Store files | camelCase, `.store.ts` suffix | `ui.store.ts`, `auth.store.ts` |
 | Constants | SCREAMING_SNAKE_CASE | `MAX_UPLOAD_SIZE`, `API_BASE_URL` |
 | Route files | lowercase (Next.js convention) | `page.tsx`, `layout.tsx` |
-| CSS classes | kebab-case (Tailwind handles it) | — |
+| CSS classes | kebab-case (Tailwind handles it) | → |
 | Feature folders | kebab-case | `components/features/user-profile/` |
 
 ---

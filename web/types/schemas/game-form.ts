@@ -109,6 +109,8 @@ export type AdminGameFormPayload = {
 export type ParsedAdminGameForm = {
   id: string | null;
   admin_will_play: boolean;
+  /** When false, payment sync uses only the game's dedicated Gmail (no org inbox fallback). */
+  gmail_use_universal_fallback: boolean;
   payload: AdminGameFormPayload;
 };
 
@@ -162,6 +164,8 @@ export function parseAdminGameFormFromFormData(
   const entryRaw = val.entry_instructions.trim();
   const courtRaw = val.court.trim();
   const admin_will_play = val.admin_will_play === "on";
+  const gmail_use_universal_fallback =
+    formString(formData, "gmail_disable_universal_gmail_fallback") !== "on";
   const visibility = val.visibility.trim() || "public";
   const listed = visibility !== "invite";
   const opensRaw = val.registration_opens_at.trim();
@@ -193,5 +197,8 @@ export function parseAdminGameFormFromFormData(
     court: courtRaw || null,
   };
 
-  return { ok: true, data: { id, admin_will_play, payload } };
+  return {
+    ok: true,
+    data: { id, admin_will_play, gmail_use_universal_fallback, payload },
+  };
 }

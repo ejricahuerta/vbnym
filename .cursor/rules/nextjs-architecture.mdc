@@ -6,16 +6,16 @@ globs:
 alwaysApply: true
 ---
 
-# Architecture rules — Next.js App Router + shadcn/ui
+# Architecture rules -> Next.js App Router + shadcn/ui
 
 Reference document: `architecture.md` (root of repo).
-These rules are derived from it. When a rule here and `architecture.md` conflict, `architecture.md` wins — update this file to match.
+These rules are derived from it. When a rule here and `architecture.md` conflict, `architecture.md` wins -> update this file to match.
 
 ---
 
 ## Layer boundaries (enforced on every file)
 
-### `app/` — routing only
+### `app/` -> routing only
 - `page.tsx` and `layout.tsx` files must contain at most: imports, one exported default function, one JSX return that renders a single feature component.
 - No data fetching, no hooks, no business logic, no multi-component JSX.
 
@@ -24,26 +24,26 @@ These rules are derived from it. When a rule here and `architecture.md` conflict
 import { SettingsPage } from '@/components/features/settings/SettingsPage'
 export default function Page() { return <SettingsPage /> }
 
-// WRONG — data fetch in route file
+// WRONG -> data fetch in route file
 export default async function Page() {
   const user = await getUser() // ❌ move this into SettingsPage
   return <Settings user={user} />
 }
 ```
 
-### `server/queries/` — reads
+### `server/queries/` -> reads
 - First line after imports: `import 'server-only'`
 - Every exported function is wrapped with `cache()` from `'react'`
-- Returns typed value or `null` / `[]` — never throws for empty data
+- Returns typed value or `null` / `[]` -> never throws for empty data
 - No mutations, no `revalidatePath`, no side effects
 
-### `server/actions/` — writes
+### `server/actions/` -> writes
 - First line of file: `'use server'`
 - Structure: auth check → Zod validation → DB mutation → revalidate → return `ActionResult<T>`
-- Always returns `ActionResult<T>` — never `void`, never throws to caller
+- Always returns `ActionResult<T>` -> never `void`, never throws to caller
 - Never imported at the module level of a `'use client'` file
 
-### `components/ui/` — untouchable
+### `components/ui/` -> untouchable
 - Zero edits. Zero. Add via `npx shadcn@latest add`.
 - Extend in `components/shared/` instead.
 
@@ -55,7 +55,7 @@ Push `'use client'` as deep as possible:
 
 ```
 page.tsx (RSC)
-└── FeaturePage.tsx (RSC — fetches data)
+└── FeaturePage.tsx (RSC -> fetches data)
     ├── StaticSection.tsx (RSC)
     └── InteractiveForm.tsx ('use client' ← only here)
 ```
@@ -70,7 +70,7 @@ Do not mark a component `'use client'` unless it uses:
 
 ## TypeScript
 
-Always derive from Zod — never duplicate:
+Always derive from Zod -> never duplicate:
 
 ```ts
 // types/schemas/post.ts
@@ -78,7 +78,7 @@ export const postSchema = z.object({ title: z.string().min(1), body: z.string() 
 export type Post      = z.infer<typeof postSchema>        // ✅
 export type PostInput = z.infer<typeof postSchema.partial()> // ✅
 
-// WRONG — hand-written type that duplicates schema
+// WRONG -> hand-written type that duplicates schema
 export type Post = { title: string; body: string } // ❌
 ```
 
@@ -111,13 +111,13 @@ All exports from component files are **named exports** (not default) except `app
 
 ---
 
-## cn() — always, everywhere
+## cn() -> always, everywhere
 
 ```ts
 // ✅
 className={cn('base-class', isActive && 'text-primary', className)}
 
-// ❌ — string concat, template literal, direct clsx/twMerge
+// ❌ -> string concat, template literal, direct clsx/twMerge
 className={`base-class ${isActive ? 'text-primary' : ''}`}
 ```
 
@@ -144,7 +144,7 @@ Import order (enforced):
 
 ---
 
-## Anti-patterns — refuse and explain
+## Anti-patterns -> refuse and explain
 
 Refuse to generate the following. Explain the conflict with the architecture and provide the correct alternative.
 

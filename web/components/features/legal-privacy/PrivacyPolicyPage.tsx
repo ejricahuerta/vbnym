@@ -7,7 +7,7 @@ export function PrivacyPolicyPage() {
     <div className="min-h-screen bg-background">
       <SiteHeader />
       <main className="mx-auto max-w-2xl px-4 py-10 pb-16 sm:px-6">
-        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">North York | Markham Volleyball</p>
+        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">6IX BACK Volleyball</p>
         <h1 className="mt-2 font-heading text-3xl font-bold tracking-tight text-foreground">Privacy Policy</h1>
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
           Effective April 13, 2026. This policy explains what information we collect, why we collect it, and how we
@@ -18,8 +18,8 @@ export function PrivacyPolicyPage() {
           <h2 className="font-heading text-lg font-semibold text-foreground">1. Who we are</h2>
           <div className="mt-4 space-y-3 text-sm leading-relaxed text-muted-foreground">
             <p>
-              North York | Markham Volleyball (&quot;NYM,&quot; &quot;we,&quot; &quot;us&quot;) is a recreational drop-in
-              volleyball program operating in the North York and Markham areas of Ontario, Canada. We operate the website
+              6IX BACK Volleyball (&quot;6IX BACK,&quot; &quot;we,&quot; &quot;us&quot;) is a recreational drop-in
+              volleyball program operating in Toronto and the GTA in Ontario, Canada. We operate the website
               at <span className="font-medium text-foreground">vbnym.ednsy.com</span> (the &quot;Site&quot;).
             </p>
           </div>
@@ -31,19 +31,19 @@ export function PrivacyPolicyPage() {
             <p className="font-medium text-foreground">Information you provide</p>
             <ul className="list-disc space-y-1.5 pl-5">
               <li>
-                <span className="font-medium text-foreground">Registration details</span> — your name and email address
+                <span className="font-medium text-foreground">Registration details</span> → your name and email address
                 when you sign up for a game or join a waitlist.
               </li>
               <li>
-                <span className="font-medium text-foreground">Waiver acceptance</span> — a record that you accepted the
+                <span className="font-medium text-foreground">Waiver acceptance</span> → a record that you accepted the
                 liability waiver, along with a timestamp.
               </li>
               <li>
-                <span className="font-medium text-foreground">Payment confirmation</span> — we record receipt of your
+                <span className="font-medium text-foreground">Payment confirmation</span> → we record receipt of your
                 Interac e-Transfer. We do not store bank-account numbers or financial credentials.
               </li>
               <li>
-                <span className="font-medium text-foreground">Feedback &amp; inquiries</span> — any information you
+                <span className="font-medium text-foreground">Feedback and inquiries</span> → any information you
                 submit through our Community inbox form.
               </li>
             </ul>
@@ -51,12 +51,12 @@ export function PrivacyPolicyPage() {
             <p className="mt-4 font-medium text-foreground">Information collected automatically</p>
             <ul className="list-disc space-y-1.5 pl-5">
               <li>
-                <span className="font-medium text-foreground">Cookies</span> — we use a small cookie to remember which
+                <span className="font-medium text-foreground">Cookies</span> → we use a small cookie to remember which
                 games you have saved on your device. You can allow or decline cookies when prompted. No tracking or
                 advertising cookies are used.
               </li>
               <li>
-                <span className="font-medium text-foreground">Basic analytics</span> — we may collect anonymized usage
+                <span className="font-medium text-foreground">Basic analytics</span> → we may collect anonymized usage
                 data (page views, device type) to improve the Site. This data cannot identify you personally.
               </li>
             </ul>
@@ -68,7 +68,7 @@ export function PrivacyPolicyPage() {
           <div className="mt-4 text-sm leading-relaxed text-muted-foreground">
             <ul className="list-disc space-y-1.5 pl-5">
               <li>Processing and managing your game registrations.</li>
-              <li>Sending transactional emails — payment codes, confirmations, waitlist updates, cancellation notices.</li>
+              <li>Sending transactional emails → payment codes, confirmations, waitlist updates, cancellation notices.</li>
               <li>Recording your waiver acceptance for legal compliance.</li>
               <li>Responding to feedback or inquiries submitted through the Community inbox.</li>
               <li>Improving and maintaining the Site.</li>
@@ -86,12 +86,12 @@ export function PrivacyPolicyPage() {
             <p>We do not sell, rent, or trade your personal information. We may share limited information with:</p>
             <ul className="list-disc space-y-1.5 pl-5">
               <li>
-                <span className="font-medium text-foreground">Service providers</span> — hosting, email delivery, and
+                <span className="font-medium text-foreground">Service providers</span> → hosting, email delivery, and
                 database services that help us operate the Site. These providers only process data on our behalf and under
                 our instructions.
               </li>
               <li>
-                <span className="font-medium text-foreground">Legal requirements</span> — if required by law,
+                <span className="font-medium text-foreground">Legal requirements</span> → if required by law,
                 regulation, or valid legal process.
               </li>
             </ul>
@@ -107,7 +107,14 @@ export function PrivacyPolicyPage() {
               <Link href="/community" className="font-medium text-accent underline decoration-accent/50 underline-offset-4 hover:opacity-80">
                 Community inbox
               </Link>{" "}
-              and we will process your request promptly, subject to any legal obligations to retain certain records.
+              or email Edmel at{" "}
+              <a
+                href="mailto:contact@edmel.dev"
+                className="font-medium text-accent underline decoration-accent/50 underline-offset-4 hover:opacity-80"
+              >
+                contact@edmel.dev
+              </a>
+              , and we will process your request promptly, subject to any legal obligations to retain certain records.
             </p>
           </div>
         </section>
@@ -151,7 +158,14 @@ export function PrivacyPolicyPage() {
               To exercise any of these rights, contact us through the{" "}
               <Link href="/community" className="font-medium text-accent underline decoration-accent/50 underline-offset-4 hover:opacity-80">
                 Community inbox
-              </Link>
+              </Link>{" "}
+              or email Edmel at{" "}
+              <a
+                href="mailto:contact@edmel.dev"
+                className="font-medium text-accent underline decoration-accent/50 underline-offset-4 hover:opacity-80"
+              >
+                contact@edmel.dev
+              </a>
               .
             </p>
           </div>
@@ -183,7 +197,14 @@ export function PrivacyPolicyPage() {
           <h2 className="font-heading text-lg font-semibold text-foreground">11. Contact</h2>
           <div className="mt-4 space-y-3 text-sm leading-relaxed text-muted-foreground">
             <p>
-              If you have questions or concerns about this Privacy Policy, reach out through our{" "}
+              If you have questions or concerns about this Privacy Policy, contact Edmel at{" "}
+              <a
+                href="mailto:contact@edmel.dev"
+                className="font-medium text-accent underline decoration-accent/50 underline-offset-4 hover:opacity-80"
+              >
+                contact@edmel.dev
+              </a>{" "}
+              or reach out through our{" "}
               <Link href="/community" className="font-medium text-accent underline decoration-accent/50 underline-offset-4 hover:opacity-80">
                 Community inbox
               </Link>

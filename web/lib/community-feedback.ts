@@ -1,11 +1,11 @@
-/** Shared with client UI and server action — do not put `"use server"` in this file. */
+/** Shared with client UI and server action → do not put `"use server"` in this file. */
 
 export const COMMUNITY_CATEGORIES = [
   { value: "bug", label: "Report a bug" },
   { value: "feature", label: "Feature request" },
   { value: "sponsor", label: "Sponsor the community" },
   { value: "host_game", label: "Host a game" },
-  { value: "ads", label: "Advertising & partnerships" },
+  { value: "ads", label: "Advertising and partnerships" },
 ] as const;
 
 export type CommunityCategory = (typeof COMMUNITY_CATEGORIES)[number]["value"];
