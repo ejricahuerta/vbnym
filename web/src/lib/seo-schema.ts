@@ -1,6 +1,6 @@
-import type { GameRow } from "@/types/domain";
-
+import { gameOrganizationDisplayName } from "@/lib/game-organization";
 import { buildCanonical, getSeoSiteConfig } from "@/lib/seo";
+import type { GameRow } from "@/types/domain";
 
 type JsonLdRecord = Record<string, unknown>;
 
@@ -98,7 +98,7 @@ export function buildGameEventSchema(game: GameRow): JsonLdRecord {
     },
     organizer: {
       "@type": "Organization",
-      name: "6ix Back Volleyball",
+      name: gameOrganizationDisplayName(game),
       email: game.host_email,
     },
     offers: {

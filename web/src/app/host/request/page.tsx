@@ -10,6 +10,8 @@ export const metadata: Metadata = buildStaticMetadata({
   noIndex: true,
 });
 
-export default function Page() {
-  return <HostRequestPage />;
+export default async function Page({ searchParams }: { searchParams: Promise<{ game?: string }> }) {
+  const params = await searchParams;
+  const game = typeof params.game === "string" ? params.game.trim() : undefined;
+  return <HostRequestPage gameId={game} />;
 }

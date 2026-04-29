@@ -5,12 +5,14 @@ import { cache } from "react";
 import { createServerSupabase } from "@/lib/supabase-server";
 import type { GameRow, SignupRow } from "@/types/domain";
 
+const GAME_LIST_SELECT = "*, organizations ( name )";
+
 export const listLiveGames = cache(async (): Promise<GameRow[]> => {
   try {
     const supabase = createServerSupabase();
     const { data } = await supabase
       .from("games")
-      .select("*")
+      .select(GAME_LIST_SELECT)
       .eq("status", "live")
       .order("starts_at", { ascending: true });
     return (data ?? []) as GameRow[];
@@ -27,7 +29,7 @@ export const listLiveGamesForHost = cache(async (hostEmail: string): Promise<Gam
     const supabase = createServerSupabase();
     const { data } = await supabase
       .from("games")
-      .select("*")
+      .select(GAME_LIST_SELECT)
       .eq("status", "live")
       .ilike("owner_email", normalized)
       .order("starts_at", { ascending: true });
@@ -39,16 +41,26 @@ export const listLiveGamesForHost = cache(async (hostEmail: string): Promise<Gam
 
 /** Sign-ups grouped by `game_id` for the given games (active + waitlist only). */
 export const getSignupsGroupedByGameId = cache(
-  async (gameIds: string[]): Promise<Record<string, SignupRow[]>> => {
+  async (
+    gameIds: string[],
+    options?: { includeAllPaymentStatuses?: boolean }
+  ): Promise<Record<string, SignupRow[]>> => {
     if (gameIds.length === 0) return {};
     try {
       const supabase = createServerSupabase();
-      const { data } = await supabase
+      const rosterStatuses = options?.includeAllPaymentStatuses
+        ? ["active", "waitlist", "canceled", "removed"]
+        : ["active", "waitlist"];
+      let query = supabase
         .from("signups")
-        .select("*")
+        .select("*, organizations ( name )")
         .in("game_id", gameIds)
-        .in("status", ["active", "waitlist"])
+        .in("status", rosterStatuses)
         .order("created_at", { ascending: true });
+      if (!options?.includeAllPaymentStatuses) {
+        query = query.in("payment_status", ["pending", "paid"]);
+      }
+      const { data } = await query;
       const rows = (data ?? []) as SignupRow[];
       const record: Record<string, SignupRow[]> = {};
       for (const row of rows) {
@@ -67,15 +79,51 @@ export const getGameWithRoster = cache(
   async (id: string): Promise<{ game: GameRow; roster: SignupRow[] } | null> => {
     try {
       const supabase = createServerSupabase();
-      const { data: game } = await supabase.from("games").select("*").eq("id", id).maybeSingle();
+      const { data: game } = await supabase
+        .from("games")
+        .select(GAME_LIST_SELECT)
+        .eq("id", id)
+        .maybeSingle();
       if (!game) return null;
       const { data: roster } = await supabase
         .from("signups")
-        .select("*")
+        .select("*, organizations ( name )")
         .eq("game_id", id)
         .in("status", ["active", "waitlist"])
+        .in("payment_status", ["pending", "paid"])
         .order("created_at", { ascending: true });
       return { game: game as GameRow, roster: (roster ?? []) as SignupRow[] };
+    } catch {
+      return null;
+    }
+  }
+);
+
+export type LiveGameSummaryForHostRequest = {
+  id: string;
+  title: string;
+  starts_at: string;
+  duration_minutes: number;
+  venue_name: string;
+  venue_area: string | null;
+  organizations: { name: string } | { name: string }[] | null;
+};
+
+export const getLiveGameSummaryForHostRequest = cache(
+  async (gameId: string): Promise<LiveGameSummaryForHostRequest | null> => {
+    const trimmed = gameId.trim();
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(trimmed)) {
+      return null;
+    }
+    try {
+      const supabase = createServerSupabase();
+      const { data } = await supabase
+        .from("games")
+        .select("id, title, starts_at, duration_minutes, venue_name, venue_area, organizations ( name )")
+        .eq("id", trimmed)
+        .eq("status", "live")
+        .maybeSingle();
+      return (data ?? null) as LiveGameSummaryForHostRequest | null;
     } catch {
       return null;
     }

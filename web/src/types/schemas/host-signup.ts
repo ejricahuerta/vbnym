@@ -5,7 +5,7 @@ import type { ActionResult } from "@/types/action-result";
 export const hostSetSignupPaymentStatusSchema = z.object({
   gameId: z.string().uuid(),
   signupId: z.string().uuid(),
-  paymentStatus: z.enum(["paid", "sent", "owes"]),
+  paymentStatus: z.enum(["paid", "pending", "refund", "canceled"]),
 });
 
 export type HostSetSignupPaymentStatusInput = z.infer<typeof hostSetSignupPaymentStatusSchema>;
@@ -13,7 +13,7 @@ export type HostSetSignupPaymentStatusInput = z.infer<typeof hostSetSignupPaymen
 export const hostSetSignupRosterStatusSchema = z.object({
   gameId: z.string().uuid(),
   signupId: z.string().uuid(),
-  status: z.enum(["active", "waitlist", "cancelled"]),
+  status: z.enum(["active", "waitlist", "canceled", "removed", "deleted"]),
 });
 
 export type HostSetSignupRosterStatusInput = z.infer<typeof hostSetSignupRosterStatusSchema>;

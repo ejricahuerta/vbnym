@@ -15,6 +15,7 @@ export const ADMIN_LINK_KIND = "admin_link" as const;
 export const HOST_SESSION_KIND = "host_session" as const;
 export const PLAYER_SESSION_KIND = "player_session" as const;
 export const ADMIN_SESSION_KIND = "admin_session" as const;
+export const PLAYER_CANCEL_SIGNUP_LINK_KIND = "player_cancel_signup_link" as const;
 
 type HostLinkPayload = {
   v: 1;
@@ -55,6 +56,15 @@ type AdminSessionPayload = {
   v: 1;
   k: typeof ADMIN_SESSION_KIND;
   email: string;
+  exp: number;
+};
+
+type PlayerCancelSignupLinkPayload = {
+  v: 1;
+  k: typeof PLAYER_CANCEL_SIGNUP_LINK_KIND;
+  gameId: string;
+  signupId: string;
+  playerEmail: string;
   exp: number;
 };
 
@@ -223,6 +233,65 @@ export function createAdminSessionToken(email: string): string | null {
     exp: Date.now() + MAGIC_ADMIN_SESSION_MAX_AGE_SEC * 1000,
   };
   return encodeToken(body, secret);
+}
+
+export function createPlayerCancelSignupLinkToken(input: {
+  gameId: string;
+  signupId: string;
+  playerEmail: string;
+  expiresAtMs: number;
+}): string | null {
+  const secret = getSecret();
+  if (!secret) return null;
+  const body: PlayerCancelSignupLinkPayload = {
+    v: 1,
+    k: PLAYER_CANCEL_SIGNUP_LINK_KIND,
+    gameId: input.gameId.trim(),
+    signupId: input.signupId.trim(),
+    playerEmail: input.playerEmail.trim().toLowerCase(),
+    exp: input.expiresAtMs,
+  };
+  if (!body.gameId || !body.signupId || !body.playerEmail.includes("@")) return null;
+  if (!Number.isFinite(body.exp) || body.exp <= Date.now()) return null;
+  return encodeToken(body, secret);
+}
+
+export function verifyPlayerCancelSignupLinkToken(
+  token: string | undefined | null
+): { gameId: string; signupId: string; playerEmail: string; exp: number } | null {
+  if (!token?.trim()) return null;
+  const secret = getSecret();
+  if (!secret) return null;
+  const parts = decodeToken(token.trim());
+  if (!parts) return null;
+  const expected = signBody(parts.bodyUtf8, secret);
+  if (!timingSafeSigEqual(expected, parts.sig)) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(parts.bodyUtf8);
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== "object") return null;
+  const p = parsed as {
+    v?: number;
+    k?: string;
+    gameId?: string;
+    signupId?: string;
+    playerEmail?: string;
+    exp?: number;
+  };
+  if (p.v !== 1 || p.k !== PLAYER_CANCEL_SIGNUP_LINK_KIND) return null;
+  if (typeof p.gameId !== "string" || !p.gameId.trim()) return null;
+  if (typeof p.signupId !== "string" || !p.signupId.trim()) return null;
+  if (typeof p.playerEmail !== "string" || !p.playerEmail.includes("@")) return null;
+  if (typeof p.exp !== "number" || !Number.isFinite(p.exp) || p.exp <= Date.now()) return null;
+  return {
+    gameId: p.gameId.trim(),
+    signupId: p.signupId.trim(),
+    playerEmail: p.playerEmail.trim().toLowerCase(),
+    exp: p.exp,
+  };
 }
 
 export function verifyAdminSessionToken(

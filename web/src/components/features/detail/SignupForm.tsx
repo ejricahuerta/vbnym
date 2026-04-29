@@ -105,7 +105,8 @@ export function SignupForm({
           </div>
           <p style={{ margin: "0 0 18px", fontSize: 14, color: "var(--ink-2)", lineHeight: 1.55 }}>
             Your spot is held. We auto-match your reference code in the Interac message → usually within a minute of it
-            landing → and your status flips to confirmed.
+            landing → and your status flips to confirmed. If payment is still pending after 30 minutes, the pending signup
+            can be auto-cancelled.
           </p>
           <div className="card thin" style={{ padding: 14, background: "var(--bg)", marginBottom: 14, boxShadow: "none" }}>
             <div
@@ -131,7 +132,7 @@ export function SignupForm({
                   border: "2px solid var(--ink)",
                 }}
               />
-              Awaiting confirmation from {hostFirst}
+              Pending confirmation from {hostFirst}
             </div>
           </div>
           <button type="button" className="btn ghost sm" style={{ width: "100%" }} disabled title="Coming soon">
@@ -162,7 +163,7 @@ export function SignupForm({
           <span className="chip gold">2 / 2</span>
         </div>
         <div style={{ padding: 20 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12, marginBottom: 14 }}>
             <div>
               <div
                 className="mono"
@@ -288,7 +289,10 @@ export function SignupForm({
             onClick={submitToServer}
             className="btn lg"
             disabled={pending || !playerName.trim() || !playerEmail.trim()}
-            style={{ width: "100%", opacity: !playerName || !playerEmail ? 0.4 : 1 }}
+            style={{
+              width: "100%",
+              opacity: !playerName || !playerEmail ? 0.4 : 1,
+            }}
           >
             {pending ? "Creating your signup…" : "Continue to Interac →"}
           </button>

@@ -37,8 +37,8 @@ export function RegistrationPoliciesSection() {
         REFUNDS
       </h3>
       <p style={{ margin: "10px 0 0", color: "var(--ink-2)" }}>
-        Any refunds owed are sent after games are settled (for example, if a run is cancelled or adjusted after accounting).
-        If nothing is owed, you will not receive a refund message.
+        You can request a refund up to {CANCELLATION_MIN_HOURS_BEFORE_GAME} hours before the scheduled start time.
+        After that cutoff, your signup is non-refundable. Any approved refund owed is sent after games are settled.
       </p>
     </div>
   );
