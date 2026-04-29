@@ -1,5 +1,6 @@
 import "server-only";
 
+import { buildGmailReconnectReminderEmailTemplate } from "@/lib/email-templates";
 import { sendTransactionalEmailResult } from "@/lib/send-email";
 import { appOrigin } from "@/lib/env";
 import { createServerSupabase } from "@/lib/supabase-server";
@@ -44,11 +45,12 @@ function isExpiringWithinLeadDays(iso: string | null, leadDays: number): boolean
 async function sendReminderEmail(
   to: string[],
   subject: string,
-  html: string
+  html: string,
+  text: string
 ): Promise<number> {
   let sent = 0;
   for (const email of to) {
-    const result = await sendTransactionalEmailResult({ to: email, subject, html });
+    const result = await sendTransactionalEmailResult({ to: email, subject, html, text });
     if (result.ok) sent += 1;
   }
   return sent;
@@ -74,10 +76,16 @@ export async function maybeSendGmailReauthReminder(): Promise<{ ok: true; sent: 
 
   const reconnectUrl = `${appOrigin()}/api/gmail/oauth/start?mode=universal`;
   const expiresAt = data.expires_at ? new Date(data.expires_at).toUTCString() : "soon";
+  const template = buildGmailReconnectReminderEmailTemplate({
+    reconnectUrl,
+    expiresAtText: expiresAt,
+    scopeLabel: "universal",
+  });
   const sent = await sendReminderEmail(
     recipients,
-    "Reconnect Gmail for payment sync",
-    `<p>The universal Gmail connection may expire by <strong>${expiresAt}</strong>.</p><p><a href="${reconnectUrl}">Reconnect Gmail</a></p>`
+    template.subject,
+    template.html,
+    template.text
   );
   return { ok: true, sent, skipped: sent > 0 ? "sent" : "send_failed" };
 }
@@ -118,10 +126,16 @@ export async function maybeSendGameGmailReauthReminders(): Promise<{ ok: true; s
     const gameId = byConnection.get(row.id);
     const reconnectUrl = `${appOrigin()}/api/gmail/oauth/start?mode=game&gameId=${encodeURIComponent(gameId ?? "")}`;
     const expiresAt = row.expires_at ? new Date(row.expires_at).toUTCString() : "soon";
+    const template = buildGmailReconnectReminderEmailTemplate({
+      reconnectUrl,
+      expiresAtText: expiresAt,
+      scopeLabel: "game payment sync",
+    });
     const n = await sendReminderEmail(
       recipients,
-      "Reconnect Gmail for game payment sync",
-      `<p>A game Gmail connection may expire by <strong>${expiresAt}</strong>.</p><p><a href="${reconnectUrl}">Reconnect game Gmail</a></p>`
+      template.subject,
+      template.html,
+      template.text
     );
     sent += n;
   }

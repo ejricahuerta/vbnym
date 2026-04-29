@@ -18,9 +18,8 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
 
   try {
-    const matched = await syncPaidSignupsFromGmail();
-    const expired = 0;
-    return NextResponse.json({ ok: true, matched, expired });
+    const result = await syncPaidSignupsFromGmail();
+    return NextResponse.json({ ok: true, ...result });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Payment sync failed.";
     return NextResponse.json({ ok: false, error: message }, { status: 400 });

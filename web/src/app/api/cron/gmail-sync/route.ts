@@ -9,8 +9,8 @@ async function handle(req: NextRequest): Promise<Response> {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
   try {
-    const matched = await syncPaidSignupsFromGmail();
-    return NextResponse.json({ ok: true, matched });
+    const result = await syncPaidSignupsFromGmail();
+    return NextResponse.json({ ok: true, ...result });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Payment sync failed.";
     return NextResponse.json({ ok: false, error: message }, { status: 400 });

@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "download-facility-images": "tsx scripts/download-facility-images.ts"
   },
   "dependencies": {
@@ -25,6 +27,7 @@
     "dotenv": "^17.4.2",
     "eslint": "^9.39.1",
     "eslint-config-next": "16.2.3",
+    "vitest": "^3.2.4",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }
