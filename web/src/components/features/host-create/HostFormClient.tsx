@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { KindBadge } from "@/components/shared/UiPrimitives";
+import { COMING_SOON_LABEL, isGameKindComingSoon } from "@/lib/game-kind-availability";
+import { DEFAULT_ORGANIZATION_ID } from "@/lib/organization-default";
 import { publishHostGame } from "@/server/actions/host";
-import type { GameKind } from "@/types/domain";
+import type { GameKind, OrganizationRow } from "@/types/domain";
 
 const SKILLS = ["Beginner", "Intermediate", "Advanced", "Competitive"] as const;
 
@@ -303,7 +305,13 @@ function TypeIcon({ name, size }: { name: "zap" | "trophy" | "medal"; size?: num
   return <IcoMedal size={size} />;
 }
 
-export function HostFormClient({ hostSessionEmail }: { hostSessionEmail: string | null }) {
+export function HostFormClient({
+  hostSessionEmail,
+  organizations,
+}: {
+  hostSessionEmail: string | null;
+  organizations: OrganizationRow[];
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const recover = searchParams.get("recover");
@@ -328,11 +336,25 @@ export function HostFormClient({ hostSessionEmail }: { hostSessionEmail: string 
   const [error, setError] = useState<string | null>(null);
   const [depositConfirmed, setDepositConfirmed] = useState(true);
   const [joinAsPlayer, setJoinAsPlayer] = useState(false);
+  const [organizationId, setOrganizationId] = useState(DEFAULT_ORGANIZATION_ID);
+
+  useEffect(() => {
+    if (organizations.length === 0) return;
+    const stillValid = organizations.some((o) => o.id === organizationId);
+    if (!stillValid) {
+      setOrganizationId(organizations[0]?.id ?? DEFAULT_ORGANIZATION_ID);
+    }
+  }, [organizations, organizationId]);
+
   function upd(key: keyof typeof form, value: string): void {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
   function publish(): void {
+    if (isGameKindComingSoon(kind)) {
+      setError("League and Tournament are Coming Soon.");
+      return;
+    }
     const startsAt = buildStartsAtIso(form.date, form.time);
     const fd = new FormData();
     fd.set("kind", kind);
@@ -352,6 +374,7 @@ export function HostFormClient({ hostSessionEmail }: { hostSessionEmail: string 
     fd.set("format", formatNotes);
     fd.set("hostName", form.hostName);
     fd.set("hostEmail", form.hostEmail);
+    fd.set("organizationId", organizationId);
 
     setError(null);
     startTransition(async () => {
@@ -436,6 +459,7 @@ export function HostFormClient({ hostSessionEmail }: { hostSessionEmail: string 
             <div className="host-type-cards">
               {TYPE_OPTIONS.map((o) => {
                 const active = kind === o.id;
+                const comingSoon = isGameKindComingSoon(o.id);
                 const headerBg = active
                   ? "var(--ink)"
                   : o.id === "dropin"
@@ -447,10 +471,14 @@ export function HostFormClient({ hostSessionEmail }: { hostSessionEmail: string 
                   <button
                     key={o.id}
                     type="button"
-                    onClick={() => setKind(o.id)}
+                    onClick={() => {
+                      if (!comingSoon) setKind(o.id);
+                    }}
+                    disabled={comingSoon}
+                    aria-disabled={comingSoon}
                     style={{
                       appearance: "none",
-                      cursor: "pointer",
+                      cursor: comingSoon ? "not-allowed" : "pointer",
                       textAlign: "left",
                       background: active ? "var(--ink)" : "var(--paper)",
                       color: active ? "var(--paper)" : "var(--ink)",
@@ -464,6 +492,7 @@ export function HostFormClient({ hostSessionEmail }: { hostSessionEmail: string 
                       transition: "transform .15s ease, box-shadow .15s ease, background .15s ease",
                       display: "flex",
                       flexDirection: "column",
+                      opacity: comingSoon ? 0.7 : 1,
                     }}
                   >
                     <div
@@ -480,7 +509,7 @@ export function HostFormClient({ hostSessionEmail }: { hostSessionEmail: string 
                         FORMAT · 0{o.formatIdx}
                       </span>
                       <span className="mono" style={{ fontSize: 10, letterSpacing: ".14em", fontWeight: 700, opacity: 0.72 }}>
-                        {o.stat.toUpperCase()}
+                        {comingSoon ? COMING_SOON_LABEL.toUpperCase() : o.stat.toUpperCase()}
                       </span>
                     </div>
 
@@ -552,9 +581,9 @@ export function HostFormClient({ hostSessionEmail }: { hostSessionEmail: string 
                       }}
                     >
                       <span className="mono" style={{ fontSize: 10, letterSpacing: ".16em", fontWeight: 700 }}>
-                        {active ? "SELECTED" : "TAP TO PICK"}
+                        {comingSoon ? COMING_SOON_LABEL.toUpperCase() : active ? "SELECTED" : "TAP TO PICK"}
                       </span>
-                      {active ? <IcoCheckCircle size={15} /> : <IcoArrowRight size={15} />}
+                      {comingSoon ? <IcoMedal size={15} /> : active ? <IcoCheckCircle size={15} /> : <IcoArrowRight size={15} />}
                     </div>
                   </button>
                 );
@@ -580,6 +609,36 @@ export function HostFormClient({ hostSessionEmail }: { hostSessionEmail: string 
                   kind === "dropin" ? "Tuesday Co-ed 6s" : kind === "league" ? "Spring Co-ed 6s → Tuesday A" : "6ix Back Spring Open"
                 }
               />
+            </div>
+
+            <div className="field">
+              <label className="label">Presenting organization</label>
+              <select
+                className="input"
+                value={organizationId}
+                onChange={(e) => setOrganizationId(e.target.value)}
+                aria-label="Organization presenting this game"
+              >
+                {organizations.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.name}
+                  </option>
+                ))}
+              </select>
+              <div
+                className="mono"
+                style={{
+                  fontSize: 11,
+                  color: "var(--ink-3)",
+                  marginTop: 6,
+                  fontWeight: 600,
+                  letterSpacing: ".04em",
+                  lineHeight: 1.45,
+                }}
+              >
+                Shown on the listing and in player emails. Pick 6ixBack for a house-run night, or your club name if an
+                admin has created it.
+              </div>
             </div>
 
             <div className="form-grid-3">

@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { DayStamp, KindBadge, SkillDots } from "@/components/shared/UiPrimitives";
-import type { GameRow } from "@/types/domain";
+import { COMING_SOON_LABEL, isGameKindComingSoon } from "@/lib/game-kind-availability";
+import { gameOrganizationDisplayName } from "@/lib/game-organization";
+import type { GameRow, SignupRow } from "@/types/domain";
 
 const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 
@@ -15,7 +17,31 @@ function formatGameRange(iso: string, durationMinutes: number): string {
   return `${start.toLocaleTimeString("en-CA", o)} – ${end.toLocaleTimeString("en-CA", o)}`;
 }
 
-export function BrowseClient({ games }: { games: GameRow[] }) {
+function initials(name: string): string {
+  const tokens = name.trim().split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return "?";
+  return tokens
+    .slice(0, 2)
+    .map((token) => token[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
+function skillTextColor(skill: string): string {
+  const value = skill.trim().toLowerCase();
+  if (value.includes("beginner")) return "var(--ok)";
+  if (value.includes("intermediate")) return "var(--accent-deep)";
+  if (value.includes("advanced")) return "var(--payment-sent)";
+  if (value.includes("competitive") || value.includes("open")) return "var(--warn)";
+  return "var(--ink-2)";
+}
+
+export function BrowseClient({
+  games,
+  signupsByGameId,
+}: {
+  games: GameRow[];
+  signupsByGameId: Record<string, SignupRow[]>;
+}) {
   const [tab, setTab] = useState<"all" | "dropin" | "league" | "tournament">("all");
   const [view, setView] = useState<"grid" | "list">("grid");
   const [dayFilter, setDayFilter] = useState<string>("any");
@@ -53,6 +79,16 @@ export function BrowseClient({ games }: { games: GameRow[] }) {
     }),
     [games]
   );
+  const kindTabs = useMemo(
+    () =>
+      [
+        { id: "all" as const, label: "All", n: counts.all },
+        { id: "dropin" as const, label: "Drop-ins", n: counts.dropin },
+        { id: "league" as const, label: "Leagues", n: counts.league },
+        { id: "tournament" as const, label: "Tournaments", n: counts.tournament },
+      ].filter((option) => option.id === "all" || !isGameKindComingSoon(option.id)),
+    [counts]
+  );
 
   return (
     <>
@@ -68,22 +104,20 @@ export function BrowseClient({ games }: { games: GameRow[] }) {
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
-        {[
-          { id: "all", label: "All", n: counts.all },
-          { id: "dropin", label: "Drop-ins", n: counts.dropin },
-          { id: "league", label: "Leagues", n: counts.league },
-          { id: "tournament", label: "Tournaments", n: counts.tournament },
-        ].map((option) => (
+      <div className="browse-tab-row" style={{ marginBottom: 14 }}>
+        {kindTabs.map((option) => (
           <button
             key={option.id}
             type="button"
-            onClick={() => setTab(option.id as "all" | "dropin" | "league" | "tournament")}
+            onClick={() => {
+              setTab(option.id);
+            }}
             className="browse-filter-btn"
             style={{
               background: tab === option.id ? "var(--ink)" : "transparent",
               color: tab === option.id ? "var(--paper)" : "var(--ink)",
               boxShadow: tab === option.id ? "2px 2px 0 var(--accent)" : "2px 2px 0 var(--ink)",
+              justifyContent: "center",
             }}
           >
             {option.label}{" "}
@@ -91,11 +125,11 @@ export function BrowseClient({ games }: { games: GameRow[] }) {
           </button>
         ))}
       </div>
-      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 18 }}>
+      <div className="browse-controls-row" style={{ marginBottom: 18 }}>
         <select
           className="input sm browse-filter-select"
           aria-label="Filter by day"
-          style={{ minWidth: 132 }}
+          style={{ width: "auto", minWidth: 140 }}
           value={dayFilter}
           onChange={(event) => setDayFilter(event.target.value)}
         >
@@ -109,7 +143,7 @@ export function BrowseClient({ games }: { games: GameRow[] }) {
         <select
           className="input sm browse-filter-select"
           aria-label="Filter by area"
-          style={{ minWidth: 170 }}
+          style={{ width: "auto", minWidth: 180 }}
           value={areaFilter}
           onChange={(event) => setAreaFilter(event.target.value)}
         >
@@ -120,7 +154,9 @@ export function BrowseClient({ games }: { games: GameRow[] }) {
             </option>
           ))}
         </select>
-        <span className="mono" style={{ marginLeft: "auto", fontSize: 12, color: "var(--ink-2)" }}>{filtered.length} found</span>
+        <span className="mono browse-controls-count" style={{ fontSize: 12, color: "var(--ink-2)" }}>
+          {filtered.length} found
+        </span>
       </div>
 
       {filtered.length === 0 ? (
@@ -150,15 +186,26 @@ export function BrowseClient({ games }: { games: GameRow[] }) {
           </p>
         </div>
       ) : view === "grid" ? (
-        <div className="browse-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 14 }}>
+        <div className="browse-grid" style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>
           {filtered.map((g) => {
             const spots = Math.max(g.capacity - g.signed_count, 0);
             const full = g.signed_count >= g.capacity;
             const almost = !full && spots <= 4 && spots > 0;
             const isLeague = g.kind === "league";
             const isTournament = g.kind === "tournament";
-            return (
-              <Link key={g.id} href={`/games/${g.id}`} className={isLeague ? "liftable" : "card liftable"} style={{ display: "block", padding: 0, overflow: "hidden" }}>
+            const comingSoon = isGameKindComingSoon(g.kind);
+            const cardBody = (
+              <div
+                style={{ display: "block", padding: 0, overflow: "hidden", position: "relative" }}
+              >
+                {comingSoon ? (
+                  <span
+                    className="chip"
+                    style={{ position: "absolute", right: 12, top: 12, zIndex: 2, background: "var(--warn)", borderColor: "var(--warn)", color: "var(--paper)" }}
+                  >
+                    {COMING_SOON_LABEL}
+                  </span>
+                ) : null}
                 {isLeague ? (
                   <div className="card dark" style={{ padding: 0, overflow: "hidden" }}>
                     <div style={{ padding: "10px 14px", borderBottom: "2px solid var(--paper)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -169,9 +216,12 @@ export function BrowseClient({ games }: { games: GameRow[] }) {
                       <h3 className="display" style={{ fontSize: 24, margin: "0 0 12px", color: "var(--accent)", lineHeight: 0.95, letterSpacing: "-.02em" }}>
                         {g.title}
                       </h3>
-                      <div style={{ fontSize: 13, color: "rgba(251,248,241,.7)", marginBottom: 14 }}>
+                      <div style={{ fontSize: 13, color: "rgba(251,248,241,.7)", marginBottom: 8 }}>
                         {g.venue_name}
                         {g.venue_area ? ` → Starts ${new Date(g.starts_at).toLocaleDateString("en-CA", { month: "short", day: "numeric" })}` : ""}
+                      </div>
+                      <div style={{ fontSize: 11, color: "rgba(251,248,241,.65)", marginBottom: 14 }}>
+                        Organizer · {gameOrganizationDisplayName(g)}
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "rgba(251,248,241,.85)", marginBottom: 18 }}>
                         <SkillDots level={g.skill_level} invert />
@@ -211,7 +261,12 @@ export function BrowseClient({ games }: { games: GameRow[] }) {
                         </div>
                       </div>
                       <h3 className="display" style={{ margin: "0 0 8px", fontSize: 30, lineHeight: 0.95 }}>{g.title}</h3>
-                      <div style={{ fontSize: 13, color: "var(--ink-2)" }}>{g.venue_name} {g.notes ? ` · ${g.notes}` : ""}</div>
+                      <div style={{ fontSize: 13, color: "var(--ink-2)", marginBottom: 6 }}>
+                        {g.venue_name} {g.notes ? ` · ${g.notes}` : ""}
+                      </div>
+                      <div style={{ fontSize: 11, color: "var(--ink-3)", marginBottom: 10 }}>
+                        Organizer · {gameOrganizationDisplayName(g)}
+                      </div>
                       <div style={{ borderTop: "2px dashed var(--ink)", marginTop: 12, paddingTop: 10, display: "flex", justifyContent: "space-between" }}>
                         <span className="mono" style={{ fontSize: 11 }}>{g.signed_count}/{g.capacity} TEAMS</span>
                         <span className="display" style={{ fontSize: 22 }}>${(g.price_cents / 100).toFixed(0)}/TEAM</span>
@@ -239,6 +294,7 @@ export function BrowseClient({ games }: { games: GameRow[] }) {
                       <div style={{ fontSize: 12.5, color: "var(--ink-2)", marginBottom: 6, lineHeight: 1.5 }}>
                         <div>{g.venue_name}{g.venue_area ? ` → ${g.venue_area}` : ""}</div>
                         <div className="mono" style={{ marginTop: 4 }}>{formatGameRange(g.starts_at, g.duration_minutes)}</div>
+                        <div style={{ marginTop: 4, fontSize: 11 }}>Organizer · {gameOrganizationDisplayName(g)}</div>
                       </div>
                       <div style={{ fontSize: 12, color: "var(--ink-2)", marginTop: 8, display: "inline-flex", alignItems: "center", gap: 8 }}>
                         <SkillDots level={g.skill_level} />
@@ -255,50 +311,163 @@ export function BrowseClient({ games }: { games: GameRow[] }) {
                     </div>
                   </>
                 )}
+              </div>
+            );
+            if (comingSoon) {
+              return (
+                <div key={g.id} className={isLeague ? "liftable" : "card liftable"} style={{ display: "block", padding: 0, overflow: "hidden", opacity: 0.72 }}>
+                  {cardBody}
+                </div>
+              );
+            }
+            return (
+              <Link key={g.id} href={`/games/${g.id}`} className={isLeague ? "liftable" : "card liftable"} style={{ display: "block", padding: 0, overflow: "hidden" }}>
+                {cardBody}
               </Link>
             );
           })}
         </div>
       ) : (
         <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-          {filtered.map((g, index) => (
-            <Link
-              key={g.id}
-              href={`/games/${g.id}`}
-              className="browse-list-row"
-              style={{
-                display: "grid",
-                gridTemplateColumns: "80px 1.6fr 1.2fr 0.8fr 0.6fr 0.6fr",
-                gap: 14,
-                alignItems: "center",
-                padding: "14px 18px",
-                borderBottom: index < filtered.length - 1 ? "1px dashed var(--ink-3)" : "none",
-              }}
-            >
-              <DayStamp iso={g.starts_at} size="sm" />
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
-                  <KindBadge kind={g.kind} />
-                  <h4 style={{ margin: 0, fontSize: 15, fontWeight: 800 }}>{g.title}</h4>
+          {filtered.map((g, index) => {
+            const capLabel = `${g.signed_count}/${g.capacity} signed`;
+            const priceLabel = isGameKindComingSoon(g.kind) ? COMING_SOON_LABEL : `$${(g.price_cents / 100).toFixed(0)}`;
+            const playerInitials = (signupsByGameId[g.id] ?? [])
+              .filter((signup) => signup.status === "active")
+              .map((signup) => initials(signup.player_name))
+              .slice(0, 3);
+            const openSpots = Math.max(g.capacity - g.signed_count, 0);
+            const remainingAvatarSlots = Math.max(3 - playerInitials.length, 0);
+            const ghostAvatarCount = Math.min(openSpots, remainingAvatarSlots);
+            const openOverflowCount = Math.max(openSpots - ghostAvatarCount, 0);
+            const rowContent = (
+              <>
+              <div className="browse-list-mobile">
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                  <div style={{ flexShrink: 0 }}>
+                    <DayStamp iso={g.starts_at} size="sm" />
+                  </div>
+                  <div style={{ minWidth: 0, flex: 1, display: "grid", gap: 6 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                      <KindBadge kind={g.kind} />
+                      <div className="display" style={{ fontSize: 18, lineHeight: 1 }}>
+                        {priceLabel}
+                      </div>
+                    </div>
+                    <h4 style={{ margin: 0, fontSize: 16, fontWeight: 800, lineHeight: 1.25 }}>{g.title}</h4>
+                    <div style={{ fontSize: 12, color: "var(--ink-2)", lineHeight: 1.4 }}>
+                      {formatGameRange(g.starts_at, g.duration_minutes)}
+                    </div>
+                    <div style={{ fontSize: 12, color: "var(--ink-2)", lineHeight: 1.4 }}>
+                      {g.venue_name}
+                      {g.venue_area ? ` · ${g.venue_area}` : ""}
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--ink-3)", lineHeight: 1.3 }}>
+                      Organizer · {gameOrganizationDisplayName(g)}
+                    </div>
+                  </div>
                 </div>
-                <div style={{ fontSize: 12.5, color: "var(--ink-2)" }}>
-                  {formatGameRange(g.starts_at, g.duration_minutes)}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: 12, gap: 12 }}>
+                  <div className="mono" style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".08em", color: skillTextColor(g.skill_level) }}>
+                    {g.skill_level.toUpperCase()}
+                  </div>
+                  <div style={{ display: "grid", justifyItems: "end", gap: 6 }}>
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                      <div className="browse-player-avatar-stack">
+                        {playerInitials.map((label, avatarIndex) => (
+                          <span
+                            key={`${g.id}-avatar-${avatarIndex}`}
+                            aria-label={`Player ${avatarIndex + 1} initials ${label}`}
+                            title={label}
+                            className="browse-player-avatar"
+                            style={{
+                              marginLeft: avatarIndex === 0 ? 0 : -7,
+                            }}
+                          >
+                            {label}
+                          </span>
+                        ))}
+                        {Array.from({ length: ghostAvatarCount }).map((_, ghostIndex) => (
+                          <span
+                            key={`${g.id}-open-${ghostIndex}`}
+                            className="browse-player-avatar browse-player-avatar-open"
+                            aria-label="Open spot"
+                            style={{
+                              marginLeft: playerInitials.length > 0 || ghostIndex > 0 ? -7 : 0,
+                            }}
+                          >
+                            +
+                          </span>
+                        ))}
+                        {openOverflowCount > 0 ? (
+                          <span
+                            className="mono browse-player-avatar browse-player-avatar-more"
+                            aria-label={`${openOverflowCount} more open spots`}
+                            style={{
+                              marginLeft: playerInitials.length > 0 || ghostAvatarCount > 0 ? -7 : 0,
+                            }}
+                          >
+                            +{openOverflowCount}
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="mono" style={{ fontSize: 10, letterSpacing: ".08em", fontWeight: 700, color: "var(--ink-3)" }}>
+                        {capLabel}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div style={{ fontSize: 13 }}>
-                {g.venue_name}
-                <br />
-                <span style={{ color: "var(--ink-3)" }}>{g.venue_area ?? "Toronto"}</span>
+              <div className="browse-list-desktop">
+                <DayStamp iso={g.starts_at} size="sm" />
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
+                    <KindBadge kind={g.kind} />
+                    <h4 style={{ margin: 0, fontSize: 15, fontWeight: 800 }}>{g.title}</h4>
+                  </div>
+                  <div style={{ fontSize: 12.5, color: "var(--ink-2)" }}>
+                    {formatGameRange(g.starts_at, g.duration_minutes)}
+                  </div>
+                  <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 2 }}>
+                    Organizer · {gameOrganizationDisplayName(g)}
+                  </div>
+                </div>
+                <div style={{ fontSize: 13 }}>
+                  {g.venue_name}
+                  <br />
+                  <span style={{ color: "var(--ink-3)" }}>{g.venue_area ?? "Toronto"}</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5 }}>
+                  <SkillDots level={g.skill_level} />
+                </div>
+                <div className="mono" style={{ fontSize: 11, letterSpacing: ".08em", fontWeight: 700 }}>
+                  {capLabel}
+                </div>
+                <div className="display" style={{ fontSize: 18 }}>
+                  {priceLabel}
+                </div>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5 }}>
-                <SkillDots level={g.skill_level} />
-              </div>
-              <div className="mono" style={{ fontSize: 11, letterSpacing: ".08em", fontWeight: 700 }}>
-                {g.signed_count}/{g.capacity}
-              </div>
-              <div className="display" style={{ fontSize: 18 }}>${(g.price_cents / 100).toFixed(0)}</div>
-            </Link>
-          ))}
+              </>
+            );
+            const rowStyle = {
+              display: "block",
+              padding: "14px 18px",
+              borderBottom: index < filtered.length - 1 ? "1px dashed var(--ink-3)" : "none",
+              opacity: isGameKindComingSoon(g.kind) ? 0.7 : 1,
+            } as const;
+            if (isGameKindComingSoon(g.kind)) {
+              return (
+                <div key={g.id} className="browse-list-row" style={rowStyle}>
+                  {rowContent}
+                </div>
+              );
+            }
+            return (
+              <Link key={g.id} href={`/games/${g.id}`} className="browse-list-row" style={rowStyle}>
+                {rowContent}
+              </Link>
+            );
+          })}
         </div>
       )}
     </>

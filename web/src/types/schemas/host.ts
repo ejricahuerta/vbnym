@@ -1,9 +1,12 @@
 import { z } from "zod";
 
+import { isGameKindComingSoon } from "@/lib/game-kind-availability";
 import type { ActionResult } from "@/types/action-result";
 
 export const hostPublishSchema = z.object({
-  kind: z.enum(["dropin", "league", "tournament"]),
+  kind: z.enum(["dropin", "league", "tournament"]).refine((kind) => !isGameKindComingSoon(kind), {
+    message: "League and Tournament are Coming Soon.",
+  }),
   title: z.string().trim().min(3),
   venueName: z.string().trim().min(2),
   venueArea: z.string().trim().optional(),
@@ -15,6 +18,7 @@ export const hostPublishSchema = z.object({
   format: z.string().trim().min(2),
   hostName: z.string().trim().min(2),
   hostEmail: z.email(),
+  organizationId: z.string().uuid(),
   joinAsPlayer: z.boolean(),
 });
 
@@ -46,6 +50,7 @@ export function parseHostPublishFormData(formData: FormData): ActionResult<HostP
     format: f(formData, "format"),
     hostName: f(formData, "hostName"),
     hostEmail: f(formData, "hostEmail"),
+    organizationId: f(formData, "organizationId"),
     joinAsPlayer: f(formData, "joinAsPlayer") === "on",
   });
   if (!parsed.success) {

@@ -67,7 +67,7 @@ export const getPlayerSignupsWithUpcomingGamesByEmail = cache(
 
       const { data: signups, error: signupsError } = await supabase
         .from("signups")
-        .select("*")
+        .select("*, organizations ( name )")
         .eq("player_email", normalized)
         .in("status", ["active", "waitlist"]);
 
@@ -89,7 +89,7 @@ export const getPlayerSignupsWithUpcomingGamesByEmail = cache(
       const gameIds = [...new Set(signupRows.map((s) => s.game_id))];
       const { data: games, error: gamesError } = await supabase
         .from("games")
-        .select("*")
+        .select("*, organizations ( name )")
         .in("id", gameIds)
         .eq("status", "live")
         .gte("starts_at", nowIso)

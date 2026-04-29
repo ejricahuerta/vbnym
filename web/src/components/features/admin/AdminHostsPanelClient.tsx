@@ -149,6 +149,22 @@ export function AdminHostsPanelClient({
                 <div className="mono" style={{ fontSize: 12, marginBottom: 8, wordBreak: "break-all" }}>
                   {r.email}
                 </div>
+                <div style={{ fontSize: 12, marginBottom: 8, color: "var(--ink-2)", lineHeight: 1.45 }}>
+                  <strong>Organization:</strong>{" "}
+                  {(Array.isArray(r.organizations) ? r.organizations[0] : r.organizations)?.name ?? "—"}
+                </div>
+                {r.context_game ? (
+                  <div style={{ fontSize: 12, marginBottom: 8, color: "var(--ink-2)", lineHeight: 1.45 }}>
+                    <strong>Linked game:</strong> {r.context_game.title} ·{" "}
+                    {new Date(r.context_game.starts_at).toLocaleString("en-CA", {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
+                  </div>
+                ) : null}
                 {r.message ? (
                   <p style={{ margin: "0 0 10px", fontSize: 13, color: "var(--ink-2)", lineHeight: 1.5 }}>{r.message}</p>
                 ) : null}

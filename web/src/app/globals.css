@@ -430,7 +430,7 @@ a {
 }
 
 .browse-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 1fr;
 }
 
 .input {
@@ -566,13 +566,13 @@ select.input.xl.browse-roster-game-select {
 
 .form-grid-2 {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 12px;
 }
 
 .form-grid-3 {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 12px;
 }
 
@@ -593,12 +593,166 @@ select.input.xl.browse-roster-game-select {
   opacity: 0.07;
 }
 
-@media (max-width: 920px) {
-  .form-grid-2,
-  .form-grid-3 {
-    grid-template-columns: 1fr;
+/* Mobile-first layout defaults */
+.landing-week-grid,
+.stats-strip-grid,
+.landing-how-grid,
+.landing-format-grid,
+.hero-grid,
+.detail-hero-grid,
+.detail-body-grid,
+.roster-lower-grid,
+.site-footer-columns,
+.host-roster-content-grid,
+.host-kpi-grid,
+.host-type-cards {
+  grid-template-columns: 1fr !important;
+}
+
+.roster-table-head {
+  display: none !important;
+}
+
+.roster-row,
+.browse-list-row {
+  grid-template-columns: 1fr !important;
+  gap: 8px !important;
+}
+
+.browse-list-row {
+  padding: 12px 14px !important;
+}
+
+.host-mark-as-desktop {
+  display: none !important;
+}
+
+.host-mark-as-mobile {
+  display: block !important;
+}
+
+.site-footer-columns {
+  gap: 28px !important;
+}
+
+.site-footer-bar {
+  align-items: flex-start !important;
+  flex-direction: column;
+  gap: 12px !important;
+}
+
+.player-desktop-table {
+  display: none;
+}
+
+.player-mobile-list {
+  display: grid;
+  gap: 12px;
+}
+
+@media (min-width: 720px) {
+  .browse-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .host-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (min-width: 920px) {
+  .form-grid-2 {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .form-grid-3 {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+
+  .landing-week-grid,
+  .stats-strip-grid,
+  .landing-how-grid,
+  .landing-format-grid,
+  .hero-grid,
+  .detail-hero-grid,
+  .detail-body-grid,
+  .roster-lower-grid,
+  .site-footer-columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .landing-how-grid,
+  .landing-format-grid,
+  .landing-week-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .stats-strip-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+
+  .hero-grid,
+  .detail-hero-grid,
+  .detail-body-grid {
+    grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr) !important;
+  }
+
+  .roster-table-head {
+    display: grid !important;
+  }
+
+  .roster-row {
+    grid-template-columns: 36px minmax(0, 2.25fr) minmax(84px, 0.9fr) minmax(140px, 1fr) !important;
+    gap: 12px !important;
+  }
+
+  .browse-list-row {
+    grid-template-columns: 80px 1.6fr 1.2fr 0.8fr 0.6fr 0.6fr !important;
+    gap: 14px !important;
+    padding: 14px 18px !important;
+  }
+
+  .host-mark-as-desktop {
+    display: block !important;
+  }
+
+  .host-mark-as-mobile {
+    display: none !important;
+  }
+
+  .site-footer-bar {
+    align-items: center !important;
+    flex-direction: row;
+  }
+
+  .player-desktop-table {
+    display: block;
+  }
+
+  .player-mobile-list {
+    display: none;
+  }
+}
+
+@media (min-width: 1100px) {
+  .browse-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .host-roster-content-grid {
+    grid-template-columns: minmax(0, 4fr) minmax(280px, 2fr) !important;
+  }
+
+  .host-type-cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .host-kpi-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 920px) {
   .landing-week-grid,
   .stats-strip-grid {
     grid-template-columns: 1fr !important;
@@ -659,28 +813,6 @@ select.input.xl.browse-roster-game-select {
   }
 }
 
-@media (max-width: 1100px) {
-  .browse-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .host-roster-content-grid {
-    grid-template-columns: 1fr !important;
-  }
-}
-
-@media (max-width: 720px) {
-  .browse-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .browse-list-row {
-    grid-template-columns: 1fr !important;
-    gap: 8px !important;
-    padding: 12px 14px !important;
-  }
-}
-
 .marquee-track {
   display: inline-flex;
   gap: 48px;
@@ -716,6 +848,78 @@ select.input.xl.browse-roster-game-select {
 
 .browse-filter-btn:hover {
   transform: translate(-1px, -1px);
+}
+
+.browse-tab-row,
+.browse-controls-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+}
+
+.browse-tab-row .browse-filter-btn,
+.browse-controls-row .browse-filter-select {
+  flex: 0 0 auto;
+  width: auto;
+  max-width: 100%;
+}
+
+.browse-controls-row .browse-controls-count {
+  flex: 0 0 auto;
+  margin-left: auto;
+  text-align: right;
+}
+
+.browse-list-mobile {
+  display: block;
+}
+
+.browse-list-desktop {
+  display: none;
+}
+
+.browse-player-avatar-stack {
+  display: inline-flex;
+  align-items: center;
+}
+
+.browse-player-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid var(--ink);
+  background: var(--bg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.browse-player-avatar-more {
+  background: var(--accent);
+}
+
+.browse-player-avatar-open {
+  background: transparent;
+  color: var(--ok);
+  border-style: dashed;
+}
+
+@media (min-width: 920px) {
+  .browse-list-mobile {
+    display: none;
+  }
+
+  .browse-list-desktop {
+    display: grid;
+    grid-template-columns: 80px 1.6fr 1.2fr 0.8fr 0.6fr 0.6fr;
+    gap: 14px;
+    align-items: center;
+  }
 }
 
 .roster-filter-btn {
@@ -756,16 +960,12 @@ select.input.xl.browse-roster-game-select {
   display: grid;
   gap: 14px;
   margin-top: 10px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 1fr;
 }
 
-@media (max-width: 920px) {
-  .host-type-cards {
-    grid-template-columns: 1fr !important;
-  }
-
+@media (min-width: 920px) {
   .host-form-shell {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: revert !important;
   }
 }
 
@@ -1087,7 +1287,7 @@ details.host-roster-more > summary::-webkit-details-marker {
 }
 
 .host-mark-as-mobile {
-  display: none;
+  display: block;
 }
 
 .host-payment-actions-dropdown {

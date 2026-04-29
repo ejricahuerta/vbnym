@@ -8,6 +8,8 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SeoJsonLd } from "@/components/shared/SeoJsonLd";
 import { DayStamp, KindBadge, SkillDots } from "@/components/shared/UiPrimitives";
+import { COMING_SOON_LABEL, isGameKindComingSoon } from "@/lib/game-kind-availability";
+import { DEFAULT_ORGANIZATION_ID, DEFAULT_ORGANIZATION_NAME } from "@/lib/organization-default";
 import { buildBreadcrumbSchema, buildOrganizationSchema, buildWebsiteSchema } from "@/lib/seo-schema";
 
 import type { GameRow, SignupRow } from "@/types/domain";
@@ -57,7 +59,17 @@ const LANDING_HOST_SAMPLE_HEADER: Pick<GameRow, "title" | "signed_count" | "capa
 /** Shown in the hero when there are no live games yet (illustrative ticket). */
 const LANDING_DUMMY_HERO_TICKET: Pick<
   GameRow,
-  "id" | "kind" | "title" | "venue_name" | "starts_at" | "duration_minutes" | "capacity" | "signed_count" | "price_cents"
+  | "id"
+  | "kind"
+  | "title"
+  | "venue_name"
+  | "starts_at"
+  | "duration_minutes"
+  | "capacity"
+  | "signed_count"
+  | "price_cents"
+  | "organization_id"
+  | "organizations"
 > = {
   id: "00000000-4000-8000-8000-000000000001",
   kind: "dropin",
@@ -68,6 +80,8 @@ const LANDING_DUMMY_HERO_TICKET: Pick<
   capacity: 12,
   signed_count: 8,
   price_cents: 2500,
+  organization_id: DEFAULT_ORGANIZATION_ID,
+  organizations: { name: DEFAULT_ORGANIZATION_NAME },
 };
 
 function gameKindTicketLabel(kind: GameRow["kind"]): string {
@@ -84,6 +98,8 @@ const LANDING_HOST_SAMPLE_ROSTER: SignupRow[] = [
     player_email: "alex.chen@example.com",
     payment_code: "6IX-K7M2",
     payment_status: "paid",
+    organization_id: DEFAULT_ORGANIZATION_ID,
+    organizations: { name: DEFAULT_ORGANIZATION_NAME },
     status: "active",
     created_at: "2026-04-21T14:22:00.000Z",
   },
@@ -94,6 +110,8 @@ const LANDING_HOST_SAMPLE_ROSTER: SignupRow[] = [
     player_email: "jordan.singh@example.com",
     payment_code: "6IX-P9R4",
     payment_status: "paid",
+    organization_id: DEFAULT_ORGANIZATION_ID,
+    organizations: { name: DEFAULT_ORGANIZATION_NAME },
     status: "active",
     created_at: "2026-04-21T15:01:00.000Z",
   },
@@ -103,7 +121,9 @@ const LANDING_HOST_SAMPLE_ROSTER: SignupRow[] = [
     player_name: "Sam Okonkwo",
     player_email: "sam.okonkwo@example.com",
     payment_code: "6IX-T3N8",
-    payment_status: "sent",
+    payment_status: "pending",
+    organization_id: DEFAULT_ORGANIZATION_ID,
+    organizations: { name: DEFAULT_ORGANIZATION_NAME },
     status: "active",
     created_at: "2026-04-22T09:45:00.000Z",
   },
@@ -114,6 +134,8 @@ const LANDING_HOST_SAMPLE_ROSTER: SignupRow[] = [
     player_email: "priya.n@example.com",
     payment_code: "6IX-W5L1",
     payment_status: "paid",
+    organization_id: DEFAULT_ORGANIZATION_ID,
+    organizations: { name: DEFAULT_ORGANIZATION_NAME },
     status: "active",
     created_at: "2026-04-22T11:12:00.000Z",
   },
@@ -123,7 +145,9 @@ const LANDING_HOST_SAMPLE_ROSTER: SignupRow[] = [
     player_name: "Marcus Lee",
     player_email: "marcus.lee@example.com",
     payment_code: "6IX-Z8Q6",
-    payment_status: "owes",
+    payment_status: "pending",
+    organization_id: DEFAULT_ORGANIZATION_ID,
+    organizations: { name: DEFAULT_ORGANIZATION_NAME },
     status: "active",
     created_at: "2026-04-23T18:30:00.000Z",
   },
@@ -133,18 +157,46 @@ const LANDING_HOST_SAMPLE_ROSTER: SignupRow[] = [
     player_name: "Taylor Brooks",
     player_email: "taylor.brooks@example.com",
     payment_code: "6IX-B2Y0",
-    payment_status: "owes",
+    payment_status: "pending",
+    organization_id: DEFAULT_ORGANIZATION_ID,
+    organizations: { name: DEFAULT_ORGANIZATION_NAME },
     status: "active",
     created_at: "2026-04-24T08:05:00.000Z",
   },
 ];
 
 function WeekPreviewCard({ game }: { game: GameRow }) {
+  const comingSoon = isGameKindComingSoon(game.kind);
   const spots = Math.max(game.capacity - game.signed_count, 0);
   const full = game.signed_count >= game.capacity;
   const almost = !full && spots <= 4 && spots > 0;
 
   if (game.kind === "league") {
+    if (comingSoon) {
+      return (
+        <div className="liftable" style={{ display: "block", textAlign: "left", opacity: 0.72 }}>
+          <div className="card dark" style={{ padding: 0, overflow: "hidden", position: "relative" }}>
+            <span
+              className="chip"
+              style={{ position: "absolute", right: 12, top: 12, zIndex: 2, background: "var(--warn)", borderColor: "var(--warn)", color: "var(--paper)" }}
+            >
+              {COMING_SOON_LABEL}
+            </span>
+            <div style={{ padding: "10px 14px", borderBottom: "2px solid var(--paper)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <KindBadge kind="league" invert />
+              <span className="chip outline" style={{ borderColor: "var(--paper)", color: "var(--paper)" }}>
+                8 WEEKS
+              </span>
+            </div>
+            <div style={{ padding: 18 }}>
+              <h3 className="display" style={{ fontSize: 24, margin: "0 0 12px", color: "var(--accent)", lineHeight: 0.95, letterSpacing: "-.02em" }}>
+                {game.title}
+              </h3>
+            </div>
+          </div>
+        </div>
+      );
+    }
     return (
       <Link href={`/games/${game.id}`} className="liftable" style={{ display: "block", textAlign: "left" }}>
         <div className="card dark" style={{ padding: 0, overflow: "hidden" }}>
@@ -199,6 +251,29 @@ function WeekPreviewCard({ game }: { game: GameRow }) {
     const big = d.getDate();
     const dow = d.toLocaleDateString("en-CA", { weekday: "short" }).toUpperCase();
     const mon = d.toLocaleDateString("en-CA", { month: "short" }).toUpperCase();
+    if (comingSoon) {
+      return (
+        <div className="liftable" style={{ display: "block", textAlign: "left", opacity: 0.72 }}>
+          <div className="card" style={{ padding: 0, overflow: "hidden", background: "var(--paper)", position: "relative" }}>
+            <span
+              className="chip"
+              style={{ position: "absolute", right: 12, top: 12, zIndex: 2, background: "var(--warn)", borderColor: "var(--warn)", color: "var(--paper)" }}
+            >
+              {COMING_SOON_LABEL}
+            </span>
+            <div style={{ padding: "10px 14px", borderBottom: "2px solid var(--ink)", display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--bg)" }}>
+              <KindBadge kind="tournament" />
+              <span className="chip gold">PRIZE POOL</span>
+            </div>
+            <div style={{ padding: 18 }}>
+              <h3 className="display" style={{ fontSize: 24, margin: "0 0 8px", letterSpacing: "-.02em" }}>
+                {game.title}
+              </h3>
+            </div>
+          </div>
+        </div>
+      );
+    }
     return (
       <Link href={`/games/${game.id}`} className="liftable" style={{ display: "block", textAlign: "left" }}>
         <div className="card" style={{ padding: 0, overflow: "hidden", background: "var(--paper)" }}>
@@ -334,10 +409,10 @@ export async function LandingPage() {
           <CourtHeroBg />
         </div>
         <div style={{ maxWidth: 1280, margin: "0 auto", padding: "48px 18px 44px", position: "relative" }}>
-          <div className="hero-grid" style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 32, alignItems: "center", position: "relative" }}>
+          <div className="hero-grid" style={{ display: "grid", gridTemplateColumns: "1fr", gap: 32, alignItems: "center", position: "relative" }}>
           <div className="landing-hero-copy">
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 18 }}>
-              <span className="pill solid live">Toronto &amp; GTA</span>
+              <span className="pill solid live">Toronto and GTA</span>
             </div>
             <h1 className="display landing-text-rise" style={{ fontSize: "clamp(56px, 12vw, 144px)", margin: "0 0 16px", lineHeight: 0.85, letterSpacing: "-.04em", color: "var(--paper)" }}>
               Get on
@@ -417,7 +492,7 @@ export async function LandingPage() {
             style={{
               marginTop: 40,
               display: "grid",
-              gridTemplateColumns: "repeat(4, 1fr)",
+              gridTemplateColumns: "1fr",
               gap: 14,
             }}
             className="stats-strip-grid landing-hero-kpi-strip"
@@ -505,7 +580,7 @@ export async function LandingPage() {
             </p>
           </div>
         </div>
-        <div className="landing-how-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
+        <div className="landing-how-grid" style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>
           {[
             { id: "browse", h: "Browse the schedule", b: "Filter by night, neighbourhood, skill, or format. Every drop-in, league, and tournament in the city." },
             { id: "reserve", h: "Reserve your spot", b: "Hit Sign Up. We generate a unique payment reference and copy-ready Interac request to your host." },
@@ -540,50 +615,70 @@ export async function LandingPage() {
             <br />
             you want.
           </h2>
-          <div className="landing-format-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
+          <div className="landing-format-grid" style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>
             {[
               { kind: "dropin" as const, label: "DROP-IN", title: "Pick-up sessions", desc: "Single-session sign-ups across the GTA → mornings, lunch hours, evenings, weekends. Beginner clinics to competitive open gym.", stat: "~32 sessions/wk" },
               { kind: "league" as const, label: "LEAGUE", title: "8–10 week seasons", desc: "Bring a team or join solo and we draft you in. Standings, playoffs, the whole thing.", stat: "14 leagues running" },
               { kind: "tournament" as const, label: "TOURNAMENT", title: "Single-day events", desc: "Pool play into bracket. Trophies, prize money, and bragging rights.", stat: "2 next month" },
-            ].map((c, i) => (
-              <Link
-                key={c.kind}
-                href="/browse"
-                className="liftable landing-format-card"
-                style={{
-                  textAlign: "left",
-                  background: i === 0 ? "var(--accent)" : "transparent",
-                  color: i === 0 ? "var(--ink)" : "var(--paper)",
-                  padding: 24,
-                  border: `2px solid ${i === 0 ? "var(--ink)" : "var(--paper)"}`,
-                  borderRadius: 8,
-                  position: "relative",
-                  overflow: "hidden",
-                  minHeight: 280,
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  boxShadow: `3px 3px 0 ${i === 0 ? "var(--ink)" : "var(--paper)"}`,
-                  fontFamily: "var(--ui)",
-                }}
-              >
-                <div>
-                  <KindBadge kind={c.kind} invert={i !== 0} />
-                  <h3 className="display landing-card-title" style={{ fontSize: "clamp(28px, 4vw, 40px)", margin: "18px 0 10px", lineHeight: 0.92, letterSpacing: "-.02em" }}>
-                    {c.title}
-                  </h3>
-                  <p style={{ color: i === 0 ? "var(--ink-2)" : "rgba(251,248,241,.7)", fontSize: 14, lineHeight: 1.5, margin: "0 0 18px" }}>{c.desc}</p>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, paddingTop: 14, borderTop: `2px solid ${i === 0 ? "var(--ink)" : "rgba(251,248,241,.2)"}` }}>
-                  <span className="mono" style={{ fontSize: 11, color: i === 0 ? "var(--ink)" : "var(--accent)", textTransform: "uppercase", letterSpacing: ".12em", fontWeight: 700 }}>
-                    {c.stat}
-                  </span>
-                  <span className="mono" style={{ fontSize: 18 }} aria-hidden>
-                    →
-                  </span>
-                </div>
-              </Link>
-            ))}
+            ].map((c, i) => {
+              const comingSoon = isGameKindComingSoon(c.kind);
+              const cardStyle = {
+                textAlign: "left",
+                background: i === 0 ? "var(--accent)" : "transparent",
+                color: i === 0 ? "var(--ink)" : "var(--paper)",
+                padding: 24,
+                border: `2px solid ${i === 0 ? "var(--ink)" : "var(--paper)"}`,
+                borderRadius: 8,
+                position: "relative",
+                overflow: "hidden",
+                minHeight: 280,
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                boxShadow: `3px 3px 0 ${i === 0 ? "var(--ink)" : "var(--paper)"}`,
+                fontFamily: "var(--ui)",
+                opacity: comingSoon ? 0.72 : 1,
+              } as const;
+              const cardContent = (
+                <>
+                  {comingSoon ? (
+                    <span
+                      className="chip"
+                      style={{ position: "absolute", right: 12, top: 12, zIndex: 2, background: "var(--warn)", borderColor: "var(--warn)", color: "var(--paper)" }}
+                    >
+                      {COMING_SOON_LABEL}
+                    </span>
+                  ) : null}
+                  <div>
+                    <KindBadge kind={c.kind} invert={i !== 0} />
+                    <h3 className="display landing-card-title" style={{ fontSize: "clamp(28px, 4vw, 40px)", margin: "18px 0 10px", lineHeight: 0.92, letterSpacing: "-.02em" }}>
+                      {c.title}
+                    </h3>
+                    <p style={{ color: i === 0 ? "var(--ink-2)" : "rgba(251,248,241,.7)", fontSize: 14, lineHeight: 1.5, margin: "0 0 18px" }}>{c.desc}</p>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, paddingTop: 14, borderTop: `2px solid ${i === 0 ? "var(--ink)" : "rgba(251,248,241,.2)"}` }}>
+                    <span className="mono" style={{ fontSize: 11, color: i === 0 ? "var(--ink)" : "var(--accent)", textTransform: "uppercase", letterSpacing: ".12em", fontWeight: 700 }}>
+                      {comingSoon ? COMING_SOON_LABEL.toUpperCase() : c.stat}
+                    </span>
+                    <span className="mono" style={{ fontSize: 18 }} aria-hidden>
+                      →
+                    </span>
+                  </div>
+                </>
+              );
+              if (comingSoon) {
+                return (
+                  <div key={c.kind} className="liftable landing-format-card" style={cardStyle}>
+                    {cardContent}
+                  </div>
+                );
+              }
+              return (
+                <Link key={c.kind} href="/browse" className="liftable landing-format-card" style={cardStyle}>
+                  {cardContent}
+                </Link>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -606,7 +701,7 @@ export async function LandingPage() {
               See all games →
             </Link>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }} className="landing-week-grid">
+          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }} className="landing-week-grid">
             {weekGames.map((g, i) => (
               <div key={g.id} className="landing-week-card" style={{ animationDelay: `${i * 0.08}s` }}>
                 <WeekPreviewCard game={g} />
@@ -619,7 +714,7 @@ export async function LandingPage() {
       <LandingFacilitiesSection facilities={facilities} />
 
       <section className="landing-section-fade" style={{ background: "var(--accent)", borderTop: "2px solid var(--ink)", borderBottom: "2px solid var(--ink)", position: "relative", overflow: "hidden" }}>
-        <div className="hero-grid" style={{ maxWidth: 1280, margin: "0 auto", padding: "56px 18px", display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 36, alignItems: "center", position: "relative" }}>
+        <div className="hero-grid" style={{ maxWidth: 1280, margin: "0 auto", padding: "56px 18px", display: "grid", gridTemplateColumns: "1fr", gap: 36, alignItems: "center", position: "relative" }}>
           <div>
             <div className="label" style={{ marginBottom: 10 }}>
               For hosts
@@ -695,9 +790,9 @@ export async function LandingPage() {
                     <span className="chip" style={{ background: "var(--ok)", borderColor: "var(--ok)", color: "var(--paper)" }}>
                       Paid
                     </span>
-                  ) : p.payment_status === "sent" ? (
+                  ) : p.payment_status === "pending" ? (
                     <span className="chip" style={{ background: "var(--payment-sent)", borderColor: "var(--ink)", color: "var(--paper)" }}>
-                      Sent
+                      Pending
                     </span>
                   ) : (
                     <span className="chip" style={{ background: "var(--warn)", borderColor: "var(--warn)", color: "var(--paper)" }}>
@@ -716,7 +811,7 @@ export async function LandingPage() {
         className="landing-section-fade"
         style={{ borderBottom: "2px solid var(--ink)", background: "var(--bg)", scrollMarginTop: "72px" }}
       >
-        <div className="hero-grid" style={{ maxWidth: 1280, margin: "0 auto", padding: "34px 18px", display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 22 }}>
+        <div className="hero-grid" style={{ maxWidth: 1280, margin: "0 auto", padding: "34px 18px", display: "grid", gridTemplateColumns: "1fr", gap: 22 }}>
           <div>
             <div className="display landing-text-rise" style={{ fontSize: "clamp(34px, 6vw, 64px)", lineHeight: 0.9, marginBottom: 10 }}>
               Chip in to keep

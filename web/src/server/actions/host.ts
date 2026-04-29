@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { signupForGame } from "@/server/actions/signup";
 import { getHostSessionEmail } from "@/lib/auth";
+import { isGameKindComingSoon } from "@/lib/game-kind-availability";
 import { createServerSupabase } from "@/lib/supabase-server";
 import {
   parseHostInteracEmailFormData,
@@ -14,6 +15,9 @@ import type { ActionResult } from "@/types/action-result";
 export async function publishHostGame(formData: FormData): Promise<ActionResult<{ id: string }>> {
   const parsed = parseHostPublishFormData(formData);
   if (!parsed.ok) return parsed;
+  if (isGameKindComingSoon(parsed.data.kind)) {
+    return { ok: false, error: "League and Tournament are Coming Soon." };
+  }
 
   const sessionEmail = await getHostSessionEmail();
   if (!sessionEmail) {
@@ -24,6 +28,16 @@ export async function publishHostGame(formData: FormData): Promise<ActionResult<
   }
 
   const supabase = createServerSupabase();
+
+  const { data: orgExists } = await supabase
+    .from("organizations")
+    .select("id")
+    .eq("id", parsed.data.organizationId)
+    .maybeSingle<{ id: string }>();
+  if (!orgExists) {
+    return { ok: false, error: "Pick a valid organization." };
+  }
+
   const { data, error } = await supabase
     .from("games")
     .insert({
@@ -41,6 +55,7 @@ export async function publishHostGame(formData: FormData): Promise<ActionResult<
       host_name: parsed.data.hostName,
       host_email: parsed.data.hostEmail.trim(),
       owner_email: sessionEmail,
+      organization_id: parsed.data.organizationId,
       notes: parsed.data.format,
       status: "live",
     })

@@ -6,6 +6,8 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { SeoJsonLd } from "@/components/shared/SeoJsonLd";
 import { SignupForm } from "@/components/features/detail/SignupForm";
 import { KindBadge } from "@/components/shared/UiPrimitives";
+import { COMING_SOON_LABEL, isGameKindComingSoon } from "@/lib/game-kind-availability";
+import { gameOrganizationDisplayName } from "@/lib/game-organization";
 import { buildBreadcrumbSchema, buildGameEventSchema } from "@/lib/seo-schema";
 import { getHostSessionEmail } from "@/lib/auth";
 import { getGameWithRoster } from "@/server/queries/games";
@@ -63,17 +65,20 @@ function DetailIconUser() {
 }
 
 export async function GameDetailPage({ gameId }: { gameId: string }) {
-  const [data, hostSessionEmail] = await Promise.all([
-    getGameWithRoster(gameId),
-    getHostSessionEmail(),
-  ]);
+  const [data, hostSessionEmail] = await Promise.all([getGameWithRoster(gameId), getHostSessionEmail()]);
   if (!data) notFound();
 
   const { game, roster } = data;
+  const organizerName = gameOrganizationDisplayName(game);
+  const scheduleForSignup =
+    game.kind === "dropin"
+      ? `${formatDay(game.starts_at)} · ${formatGameRange(game.starts_at, game.duration_minutes)}`
+      : formatDay(game.starts_at);
   const isHostForThisGame =
     hostSessionEmail != null &&
     game.owner_email.trim().toLowerCase() === hostSessionEmail.trim().toLowerCase();
   const dark = game.kind === "league";
+  const comingSoonKind = isGameKindComingSoon(game.kind);
   const venueLine = [game.venue_name, game.venue_area].filter(Boolean).join(", ");
   const formatLead = game.notes?.trim() || "Co-ed 6s";
   const formatParagraph = `${formatLead}${formatLead.endsWith(".") ? "" : "."} Show up 10 minutes early. Captains pick balanced teams. We rotate every 25 minutes.`;
@@ -144,6 +149,25 @@ export async function GameDetailPage({ gameId }: { gameId: string }) {
               HOST DASHBOARD →
             </Link>
           ) : null}
+          {!isHostForThisGame && !comingSoonKind ? (
+            <Link
+              href={`/host/request?game=${encodeURIComponent(game.id)}`}
+              className="mono"
+              style={{
+                fontSize: 12,
+                fontWeight: 600,
+                letterSpacing: ".08em",
+                textTransform: "uppercase",
+                opacity: 0.7,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                color: "inherit",
+              }}
+            >
+              REQUEST HOST ACCESS →
+            </Link>
+          ) : null}
         </div>
         <div
           style={{
@@ -151,7 +175,7 @@ export async function GameDetailPage({ gameId }: { gameId: string }) {
             margin: "0 auto",
             padding: "8px 18px 40px",
             display: "grid",
-            gridTemplateColumns: "minmax(0,1.4fr) minmax(280px,1fr)",
+            gridTemplateColumns: "1fr",
             gap: 32,
           }}
           className="detail-hero-grid"
@@ -175,27 +199,39 @@ export async function GameDetailPage({ gameId }: { gameId: string }) {
                 {game.kind === "dropin" ? ` · ${formatGameRange(game.starts_at, game.duration_minutes)}` : null}
               </div>
               <div>{venueLine}</div>
+              <div>Organizer · {organizerName}</div>
               <div>Host · {game.host_name}</div>
             </div>
           </div>
           <div>
-            <SignupForm
-              gameId={game.id}
-              priceCents={game.price_cents}
-              signedCount={game.signed_count}
-              capacity={game.capacity}
-              hostName={game.host_name}
-              hostEmail={game.host_email}
-              gameTitle={game.title}
-              startsAtDisplay={formatDay(game.starts_at)}
-              kind={game.kind}
-            />
+            {comingSoonKind ? (
+              <div className="card" style={{ padding: 16, border: "2px solid var(--ink)", background: "var(--paper)" }}>
+                <div className="chip warn" style={{ marginBottom: 10 }}>
+                  {COMING_SOON_LABEL}
+                </div>
+                <p style={{ margin: 0, color: "var(--ink-2)", lineHeight: 1.5 }}>
+                  League and Tournament signups are not open yet. Drop-in games are currently live.
+                </p>
+              </div>
+            ) : (
+              <SignupForm
+                gameId={game.id}
+                priceCents={game.price_cents}
+                signedCount={game.signed_count}
+                capacity={game.capacity}
+                hostName={game.host_name}
+                hostEmail={game.host_email}
+                gameTitle={game.title}
+                startsAtDisplay={scheduleForSignup}
+                kind={game.kind}
+              />
+            )}
           </div>
         </div>
       </section>
 
       <section style={{ maxWidth: 1280, margin: "0 auto", padding: "40px 18px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1.4fr) minmax(280px,1fr)", gap: 32 }} className="detail-body-grid">
+        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 32 }} className="detail-body-grid">
           <div>
             <div className="label">Format</div>
             <p style={{ fontSize: 16, lineHeight: 1.6, margin: "0 0 24px", maxWidth: 680, color: "var(--ink-2)" }}>

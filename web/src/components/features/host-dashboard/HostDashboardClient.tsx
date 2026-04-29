@@ -4,9 +4,10 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { type CSSProperties, useEffect, useMemo, useRef, useState, useTransition } from "react";
 
+import { gameOrganizationDisplayName } from "@/lib/game-organization";
 import type { GameRow, SignupPaymentStatus, SignupRow } from "@/types/domain";
 
-type PaymentFilter = "all" | "paid" | "sent" | "owes";
+type PaymentFilter = "all" | "paid" | "pending" | "refund" | "canceled";
 const ALERT_AUTO_DISMISS_MS = 5000;
 
 function formatSignedAgo(iso: string): string {
@@ -317,6 +318,8 @@ export function HostDashboardClient({
   const [addPlayerPending, startAddPlayerTransition] = useTransition();
   const [removePlayerTarget, setRemovePlayerTarget] = useState<SignupRow | null>(null);
   const [removePlayerPending, startRemovePlayerTransition] = useTransition();
+  const [deletePlayerTarget, setDeletePlayerTarget] = useState<SignupRow | null>(null);
+  const [deletePlayerPending, startDeletePlayerTransition] = useTransition();
   const [reportPlayerTarget, setReportPlayerTarget] = useState<SignupRow | null>(null);
   const [reportReason, setReportReason] = useState("");
   const [reportDetails, setReportDetails] = useState("");
@@ -369,30 +372,42 @@ export function HostDashboardClient({
     () => (selectedGameId ? signupsByGameId[selectedGameId] ?? [] : []),
     [selectedGameId, signupsByGameId]
   );
+  const rosterActiveRows = useMemo(
+    () => roster.filter((row) => row.status === "active" || row.status === "waitlist"),
+    [roster]
+  );
+  const rosterArchivedRows = useMemo(
+    () => roster.filter((row) => row.payment_status === "refund" || row.payment_status === "canceled"),
+    [roster]
+  );
 
   const totals = useMemo(() => {
     let paid = 0;
-    let sent = 0;
-    let owes = 0;
-    for (const row of roster) {
+    let pending = 0;
+    let refund = 0;
+    let canceled = 0;
+    for (const row of rosterActiveRows) {
       if (row.payment_status === "paid") paid += 1;
-      else if (row.payment_status === "sent") sent += 1;
-      else owes += 1;
+      else if (row.payment_status === "pending") pending += 1;
+      else if (row.payment_status === "refund") refund += 1;
+      else canceled += 1;
     }
-    return { paid, sent, owes };
-  }, [roster]);
+    return { paid, pending, refund, canceled };
+  }, [rosterActiveRows]);
 
   const filteredRoster = useMemo(() => {
-    if (filter === "all") return roster;
-    if (filter === "paid") return roster.filter((r) => r.payment_status === "paid");
-    if (filter === "sent") return roster.filter((r) => r.payment_status === "sent");
-    return roster.filter((r) => r.payment_status === "owes");
-  }, [filter, roster]);
+    if (filter === "all") return rosterActiveRows;
+    if (filter === "paid") return rosterActiveRows.filter((r) => r.payment_status === "paid");
+    if (filter === "pending") return rosterActiveRows.filter((r) => r.payment_status === "pending");
+    if (filter === "refund") return rosterArchivedRows.filter((r) => r.payment_status === "refund");
+    return rosterArchivedRows.filter((r) => r.payment_status === "canceled");
+  }, [filter, rosterActiveRows, rosterArchivedRows]);
   const visibleRosterRows = useMemo<(SignupRow | null)[]>(() => {
+    if (filter === "refund" || filter === "canceled") return filteredRoster;
     const capacity = selectedGame?.capacity ?? 0;
     const placeholders = Math.max(capacity - filteredRoster.length, 0);
     return [...filteredRoster, ...Array.from({ length: placeholders }, () => null)];
-  }, [filteredRoster, selectedGame?.capacity]);
+  }, [filter, filteredRoster, selectedGame?.capacity]);
   const displayedRosterRows = useMemo(
     () => visibleRosterRows.slice(0, rosterRowsVisible),
     [visibleRosterRows, rosterRowsVisible]
@@ -404,9 +419,9 @@ export function HostDashboardClient({
 
   const amountPerPlayer = selectedGame ? Math.max(1, Math.round(selectedGame.price_cents / 100)) : 0;
   const collected = totals.paid * amountPerPlayer;
-  const pendingPaymentCount = totals.sent + totals.owes;
+  const pendingPaymentCount = totals.pending;
   const outstandingEstimate = pendingPaymentCount * amountPerPlayer;
-  const expected = roster.length * amountPerPlayer;
+  const expected = rosterActiveRows.length * amountPerPlayer;
 
   function requestPaymentStatus(player: SignupRow, paymentStatus: SignupPaymentStatus): void {
     if (!selectedGameId || rosterSavingSignupId) return;
@@ -432,7 +447,7 @@ export function HostDashboardClient({
   }
 
   function copyEmails(): void {
-    const text = roster.map((r) => r.player_email).join("\n");
+    const text = rosterActiveRows.map((r) => r.player_email).join("\n");
     if (typeof navigator === "undefined" || !navigator.clipboard) return;
     void navigator.clipboard.writeText(text);
   }
@@ -505,13 +520,46 @@ export function HostDashboardClient({
         const fd = new FormData();
         fd.set("gameId", selectedGameId);
         fd.set("signupId", removePlayerTarget.id);
-        fd.set("status", "cancelled");
+        fd.set("status", "removed");
         const res = await setSignupRosterStatusForHost(fd);
         if (!res.ok) {
           setHostRosterError(res.error);
           return;
         }
         setRemovePlayerTarget(null);
+        router.refresh();
+      } finally {
+        setRosterSavingSignupId(null);
+      }
+    });
+  }
+
+  function openDeletePlayerModal(player: SignupRow): void {
+    setDeletePlayerTarget(player);
+  }
+
+  function closeDeletePlayerModal(): void {
+    if (deletePlayerPending) return;
+    setDeletePlayerTarget(null);
+  }
+
+  function submitDeletePlayer(): void {
+    if (!selectedGameId || !deletePlayerTarget || rosterSavingSignupId) return;
+    setHostRosterError(null);
+    setRosterSavingSignupId(deletePlayerTarget.id);
+    startDeletePlayerTransition(async () => {
+      try {
+        const { setSignupRosterStatusForHost } = await import("@/server/actions/host-signup");
+        const fd = new FormData();
+        fd.set("gameId", selectedGameId);
+        fd.set("signupId", deletePlayerTarget.id);
+        fd.set("status", "deleted");
+        const res = await setSignupRosterStatusForHost(fd);
+        if (!res.ok) {
+          setHostRosterError(res.error);
+          return;
+        }
+        setDeletePlayerTarget(null);
         router.refresh();
       } finally {
         setRosterSavingSignupId(null);
@@ -568,14 +616,24 @@ export function HostDashboardClient({
   }
 
   function exportCsv(): void {
-    const header = ["name", "email", "payment_code", "payment_status", "roster_status", "created_at"];
+    const header = [
+      "name",
+      "email",
+      "organization",
+      "payment_code",
+      "payment_status",
+      "roster_status",
+      "created_at",
+    ];
     const lines = [
       header.join(","),
-      ...roster.map((r) =>
-        [r.player_name, r.player_email, r.payment_code, r.payment_status, r.status, r.created_at].map((cell) =>
-          `"${String(cell).replace(/"/g, '""')}"`
-        ).join(",")
-      ),
+      ...rosterActiveRows.map((r) => {
+        const orgName =
+          (Array.isArray(r.organizations) ? r.organizations[0] : r.organizations)?.name ?? "";
+        return [r.player_name, r.player_email, orgName, r.payment_code, r.payment_status, r.status, r.created_at]
+          .map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
+          .join(",");
+      }),
     ];
     const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -636,16 +694,22 @@ export function HostDashboardClient({
                   </option>
                 ))}
               </select>
+              {selectedGame ? (
+                <div className="mono" style={{ fontSize: 11, letterSpacing: ".06em", color: "rgba(251,248,241,.65)" }}>
+                  Presenting organizer · {gameOrganizationDisplayName(selectedGame)}
+                </div>
+              ) : null}
             </div>
             <Link href="/host/new" className="btn lg accent" style={{ height: 56, minHeight: 56 }}>
               Host a new game
             </Link>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(5,minmax(0,1fr))", gap: 10 }}>
-            <Stat label="Signed up" value={`${roster.length}/${selectedGame?.capacity ?? 0}`} accent />
+          <div className="host-kpi-grid" style={{ display: "grid", gridTemplateColumns: "1fr", gap: 10 }}>
+            <Stat label="Signed up" value={`${rosterActiveRows.length}/${selectedGame?.capacity ?? 0}`} accent />
             <Stat label="Paid" value={String(totals.paid)} sub={`$${collected} collected`} />
-            <Stat label="Sent" value={String(totals.sent)} sub="Awaiting confirm" />
-            <Stat label="Owes" value={String(totals.owes)} sub={`~$${totals.owes * amountPerPlayer} est`} />
+            <Stat label="Pending" value={String(totals.pending)} sub="Awaiting confirm" />
+            <Stat label="Refund" value={String(totals.refund)} sub="Awaiting host refund" />
+            <Stat label="Canceled" value={String(totals.canceled)} sub="Refund completed" />
             <Stat label="Waitlist" value={String(selectedGame?.waitlist_count ?? 0)} sub="Across this game" />
           </div>
         </div>
@@ -657,16 +721,17 @@ export function HostDashboardClient({
         ) : null}
         <div
           className="host-roster-content-grid"
-          style={{ display: "grid", gridTemplateColumns: "minmax(0,4fr) minmax(280px,2fr)", gap: 16, alignItems: "start" }}
+          style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16, alignItems: "start" }}
         >
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, flexWrap: "wrap", gap: 12 }}>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 {[
-                  { id: "all" as const, label: "All", n: roster.length },
+                  { id: "all" as const, label: "All", n: rosterActiveRows.length },
                   { id: "paid" as const, label: "Paid", n: totals.paid },
-                  { id: "sent" as const, label: "Sent", n: totals.sent },
-                  { id: "owes" as const, label: "Owes", n: totals.owes },
+                  { id: "pending" as const, label: "Pending", n: totals.pending },
+                  { id: "refund" as const, label: "Refund", n: totals.refund },
+                  { id: "canceled" as const, label: "Canceled", n: totals.canceled },
                 ].map((entry) => (
                   <button
                     key={entry.id}
@@ -687,7 +752,7 @@ export function HostDashboardClient({
                 <button type="button" className="btn sm accent" onClick={openAddPlayerModal}>
                   Add player
                 </button>
-                <button type="button" className="btn sm ghost" onClick={copyEmails} disabled={roster.length === 0}>
+                <button type="button" className="btn sm ghost" onClick={copyEmails} disabled={rosterActiveRows.length === 0}>
                   Copy emails
                 </button>
               </div>
@@ -771,13 +836,13 @@ export function HostDashboardClient({
                         {initials(player.player_name)}
                       </div>
                       <div style={{ minWidth: 0 }}>
-                        <div style={{ fontWeight: 700, fontSize: 14, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        <div style={{ fontWeight: 700, fontSize: 14, overflowWrap: "anywhere" }}>
                           {player.player_name}
                         </div>
                         <div className="mono" style={{ fontSize: 10.5, color: "var(--ink-3)", letterSpacing: ".06em" }}>
                           signed {formatSignedAgo(player.created_at)}
                         </div>
-                        <div className="mono" style={{ fontSize: 10.5, color: "var(--ink-3)", letterSpacing: ".04em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        <div className="mono" style={{ fontSize: 10.5, color: "var(--ink-3)", letterSpacing: ".04em", overflowWrap: "anywhere" }}>
                           {player.player_email}
                         </div>
                       </div>
@@ -815,6 +880,7 @@ export function HostDashboardClient({
                         disabled={hostRosterPending}
                         onSelect={(next) => requestPaymentStatus(player, next)}
                         onRemove={() => openRemovePlayerModal(player)}
+                        onDelete={() => openDeletePlayerModal(player)}
                         onReport={() => openReportPlayerModal(player)}
                       />
                     )
@@ -826,7 +892,7 @@ export function HostDashboardClient({
             ))
           )}
           </div>
-          {rosterRowsVisible < visibleRosterRows.length ? (
+          {filteredRoster.length > 10 && rosterRowsVisible < visibleRosterRows.length ? (
             <div style={{ marginTop: 10, display: "flex", justifyContent: "center" }}>
               <button
                 type="button"
@@ -835,6 +901,23 @@ export function HostDashboardClient({
               >
                 Load more
               </button>
+            </div>
+          ) : null}
+          {filter === "all" && rosterArchivedRows.length > 0 ? (
+            <div className="card" style={{ marginTop: 12, padding: 14 }}>
+              <div className="label" style={{ marginBottom: 8 }}>
+                Archived players
+              </div>
+              <div style={{ display: "grid", gap: 8 }}>
+                {rosterArchivedRows.map((player) => (
+                  <div key={`archived-${player.id}`} style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                    <span style={{ fontSize: 14 }}>
+                      {player.player_name} ({player.player_email})
+                    </span>
+                    <HostPaymentStatusBadge status={player.payment_status} />
+                  </div>
+                ))}
+              </div>
             </div>
           ) : null}
           </div>
@@ -882,7 +965,7 @@ export function HostDashboardClient({
                   </div>
                 ))}
               </div>
-              <button type="button" className="btn sm ghost" style={{ marginTop: 12 }} onClick={exportCsv} disabled={roster.length === 0}>
+              <button type="button" className="btn sm ghost" style={{ marginTop: 12 }} onClick={exportCsv} disabled={rosterActiveRows.length === 0}>
                 Export CSV
               </button>
             </div>
@@ -1067,6 +1150,49 @@ export function HostDashboardClient({
             </div>
           </div>
         ) : null}
+        {deletePlayerTarget ? (
+          <div
+            role="dialog"
+            aria-modal
+            aria-label="Delete player"
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(17,17,20,.55)",
+              zIndex: 60,
+              display: "grid",
+              placeItems: "center",
+              padding: 18,
+            }}
+            onClick={closeDeletePlayerModal}
+          >
+            <div className="card" style={{ width: "min(480px, 100%)", padding: 18 }} onClick={(e) => e.stopPropagation()}>
+              <div className="label" style={{ marginBottom: 8 }}>
+                Host roster
+              </div>
+              <h3 className="display" style={{ fontSize: "clamp(22px, 4vw, 30px)", margin: "0 0 10px" }}>
+                Delete player
+              </h3>
+              <p style={{ margin: 0, color: "var(--ink-2)", fontSize: 14, lineHeight: 1.45 }}>
+                Permanently delete <strong>{deletePlayerTarget.player_name}</strong> from this roster?
+              </p>
+              <div style={{ marginTop: 14, display: "flex", justifyContent: "flex-end", gap: 8, flexWrap: "wrap" }}>
+                <button type="button" className="btn sm ghost" onClick={closeDeletePlayerModal} disabled={deletePlayerPending}>
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn sm accent"
+                  onClick={submitDeletePlayer}
+                  disabled={deletePlayerPending}
+                  aria-busy={deletePlayerPending}
+                >
+                  {deletePlayerPending ? "Deleting..." : "Delete"}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </section>
     </>
   );
@@ -1108,7 +1234,7 @@ function IcoSent(props: { size?: number }) {
   );
 }
 
-function IcoOwes(props: { size?: number }) {
+function IcoRefund(props: { size?: number }) {
   const s = props.size ?? 15;
   return (
     <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -1126,16 +1252,23 @@ function HostPaymentStatusBadge({ status }: { status: SignupPaymentStatus }) {
       </span>
     );
   }
-  if (status === "sent") {
+  if (status === "pending") {
     return (
       <span className="chip" style={{ background: "var(--payment-sent)", borderColor: "var(--ink)", color: "var(--paper)" }}>
-        Sent
+        Pending
+      </span>
+    );
+  }
+  if (status === "refund") {
+    return (
+      <span className="chip" style={{ background: "var(--warn)", borderColor: "var(--warn)", color: "var(--paper)" }}>
+        Refund
       </span>
     );
   }
   return (
-    <span className="chip" style={{ background: "var(--warn)", borderColor: "var(--warn)", color: "var(--paper)" }}>
-      Owes
+    <span className="chip" style={{ background: "var(--ink-2)", borderColor: "var(--ink-2)", color: "var(--paper)" }}>
+      Canceled
     </span>
   );
 }
@@ -1146,6 +1279,7 @@ function HostPaymentActionsDropdown({
   disabled,
   onSelect,
   onRemove,
+  onDelete,
   onReport,
 }: {
   player: SignupRow;
@@ -1153,9 +1287,10 @@ function HostPaymentActionsDropdown({
   disabled: boolean;
   onSelect: (next: SignupPaymentStatus) => void;
   onRemove: () => void;
+  onDelete: () => void;
   onReport: () => void;
 }) {
-  const options: SignupPaymentStatus[] = ["paid", "sent", "owes"];
+  const options: SignupPaymentStatus[] = ["paid", "pending", "refund", "canceled"];
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
 
@@ -1180,11 +1315,12 @@ function HostPaymentActionsDropdown({
           display: "inline-flex",
           alignItems: "center",
           gap: 6,
-          padding: 0,
+          padding: "8px 10px",
           border: "none",
           background: "transparent",
           boxShadow: "none",
           listStyle: "none",
+          minHeight: 40,
           cursor: disabled ? "not-allowed" : "pointer",
           opacity: disabled ? 0.6 : 1,
         }}
@@ -1227,6 +1363,18 @@ function HostPaymentActionsDropdown({
               style={{ justifyContent: "flex-start" }}
             >
               Remove player
+            </button>
+            <button
+              type="button"
+              className="btn sm ghost"
+              disabled={disabled}
+              onClick={() => {
+                onDelete();
+                setOpen(false);
+              }}
+              style={{ justifyContent: "flex-start" }}
+            >
+              Delete player
             </button>
             <button
               type="button"

@@ -1,5 +1,16 @@
 export type GameKind = "dropin" | "league" | "tournament";
 
+export type OrganizationRow = {
+  id: string;
+  name: string;
+  created_at: string;
+};
+
+/** Nested shape from Supabase when selecting `organizations ( name )` on games/signups. */
+export type OrganizationNameRef = {
+  name: string;
+};
+
 export type GameRow = {
   id: string;
   kind: GameKind;
@@ -16,12 +27,15 @@ export type GameRow = {
   host_name: string;
   host_email: string;
   owner_email: string;
+  organization_id: string;
+  /** Supabase FK embed is usually an object; some clients surface a one-element array. */
+  organizations: OrganizationNameRef | OrganizationNameRef[] | null;
   notes: string | null;
   status: "draft" | "live" | "cancelled";
   created_at: string;
 };
 
-export type SignupPaymentStatus = "paid" | "sent" | "owes";
+export type SignupPaymentStatus = "paid" | "pending" | "refund" | "canceled";
 
 export type SignupRow = {
   id: string;
@@ -30,6 +44,8 @@ export type SignupRow = {
   player_email: string;
   payment_code: string;
   payment_status: SignupPaymentStatus;
-  status: "active" | "waitlist" | "cancelled";
+  organization_id: string;
+  organizations: OrganizationNameRef | OrganizationNameRef[] | null;
+  status: "active" | "waitlist" | "canceled" | "removed" | "deleted";
   created_at: string;
 };

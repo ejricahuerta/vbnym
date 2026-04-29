@@ -1,10 +1,18 @@
+import type { ReactElement } from "react";
 import Link from "next/link";
 import { Suspense } from "react";
 
 import { HostAccessRequestForm } from "@/components/features/host-request/HostAccessRequestForm";
 import { LoginCenteredLayout } from "@/components/features/login/LoginCenteredLayout";
+import { getLiveGameSummaryForHostRequest } from "@/server/queries/games";
+import { listOrganizations } from "@/server/queries/organizations";
 
-export function HostRequestPage() {
+export async function HostRequestPage({ gameId }: { gameId?: string }): Promise<ReactElement> {
+  const [organizations, gameSummary] = await Promise.all([
+    listOrganizations(),
+    gameId ? getLiveGameSummaryForHostRequest(gameId) : Promise.resolve(null),
+  ]);
+
   return (
     <LoginCenteredLayout
       leftEyebrow={
@@ -19,7 +27,7 @@ export function HostRequestPage() {
       rightTitle="Request access"
     >
       <Suspense fallback={<p style={{ fontSize: 14 }}>Loading…</p>}>
-        <HostAccessRequestForm />
+        <HostAccessRequestForm organizations={organizations} gameSummary={gameSummary} />
       </Suspense>
     </LoginCenteredLayout>
   );
