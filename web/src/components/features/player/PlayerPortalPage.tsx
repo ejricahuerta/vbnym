@@ -31,6 +31,11 @@ function canPlayerCancelConfirmedSignup(startsAtIso: string, paymentStatus: stri
   return Number.isFinite(msUntilStart) && msUntilStart > TWO_HOURS_MS;
 }
 
+async function cancelSignupFormAction(formData: FormData): Promise<void> {
+  "use server";
+  await cancelSignupForPlayer(formData);
+}
+
 export async function PlayerPortalPage() {
   const sessionEmail = await getPlayerSessionEmail();
   if (!sessionEmail) {
@@ -95,7 +100,7 @@ export async function PlayerPortalPage() {
                     <div>STATUS · {signup.status}</div>
                   </div>
                   {canPlayerCancelConfirmedSignup(game.starts_at, signup.payment_status, signup.status) ? (
-                    <form action={cancelSignupForPlayer} style={{ marginTop: 12 }}>
+                    <form action={cancelSignupFormAction} style={{ marginTop: 12 }}>
                       <input type="hidden" name="gameId" value={game.id} />
                       <input type="hidden" name="signupId" value={signup.id} />
                       <button type="submit" className="button-secondary" style={{ width: "100%" }}>
@@ -146,7 +151,7 @@ export async function PlayerPortalPage() {
                       <td style={{ padding: "12px 14px", textTransform: "capitalize" }}>{signup.status}</td>
                       <td style={{ padding: "12px 14px" }}>
                         {canPlayerCancelConfirmedSignup(game.starts_at, signup.payment_status, signup.status) ? (
-                          <form action={cancelSignupForPlayer}>
+                          <form action={cancelSignupFormAction}>
                             <input type="hidden" name="gameId" value={game.id} />
                             <input type="hidden" name="signupId" value={signup.id} />
                             <button type="submit" className="button-secondary">
