@@ -6,7 +6,9 @@ import { listLiveGames } from "@/server/queries/games";
 
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
+import { SeoJsonLd } from "@/components/shared/SeoJsonLd";
 import { DayStamp, KindBadge, SkillDots } from "@/components/shared/UiPrimitives";
+import { buildBreadcrumbSchema, buildOrganizationSchema, buildWebsiteSchema } from "@/lib/seo-schema";
 
 import type { GameRow, SignupRow } from "@/types/domain";
 
@@ -321,9 +323,11 @@ export async function LandingPage() {
   const hostPreviewGame = LANDING_HOST_SAMPLE_HEADER;
   const hostPreviewRows = LANDING_HOST_SAMPLE_ROSTER;
   const hostPreviewPaid = LANDING_HOST_SAMPLE_ROSTER.filter((r) => r.payment_status === "paid").length;
+  const schemaData = [buildOrganizationSchema(), buildWebsiteSchema(), buildBreadcrumbSchema([{ name: "Home", path: "/" }])];
 
   return (
     <div>
+      <SeoJsonLd data={schemaData} />
       <SiteHeader />
       <section className="landing-hero-section" style={{ background: "var(--ink)", color: "var(--paper)", borderBottom: "2px solid var(--ink)", position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", inset: 0, opacity: 0.06, pointerEvents: "none" }}>
