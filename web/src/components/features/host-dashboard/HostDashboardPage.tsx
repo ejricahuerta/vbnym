@@ -18,7 +18,9 @@ export async function HostDashboardPage(): Promise<ReactElement> {
   }
 
   const games = await listLiveGamesForHost(hostSessionEmail);
-  const signupsByGameId = await getSignupsGroupedByGameId(games.map((g) => g.id));
+  const signupsByGameId = await getSignupsGroupedByGameId(games.map((g) => g.id), {
+    includeAllPaymentStatuses: true,
+  });
   const hostGmailConnected = await isHostGmailConnected(hostSessionEmail);
 
   return (

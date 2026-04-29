@@ -3,14 +3,21 @@ import { redirect } from "next/navigation";
 
 import { getAdminOverview } from "@/server/queries/admin";
 import { listApprovedHosts, listPendingHostAccessRequests } from "@/server/queries/hosts";
+import { listOrganizations } from "@/server/queries/organizations";
 import { AdminHostsSection } from "@/components/features/admin/AdminHostsSection";
+import { AdminOrganizationsSection } from "@/components/features/admin/AdminOrganizationsSection";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { isAdminAuthorized } from "@/lib/auth";
 
-type AdminTab = "overview" | "events" | "hosts" | "players" | "venues" | "reports";
+type AdminTab = "overview" | "events" | "hosts" | "organizations" | "players" | "venues" | "reports";
 
-const tabs: AdminTab[] = ["overview", "events", "hosts", "players", "venues", "reports"];
+const tabs: AdminTab[] = ["overview", "events", "hosts", "organizations", "players", "venues", "reports"];
+
+function tabLabel(tab: AdminTab): string {
+  if (tab === "organizations") return "Organizations";
+  return tab;
+}
 
 export async function AdminPage({ tab = "overview" }: { tab?: string }) {
   const authorized = await isAdminAuthorized();
@@ -26,6 +33,8 @@ export async function AdminPage({ tab = "overview" }: { tab?: string }) {
       : null;
   const hostsList = hostsData?.[0] ?? [];
   const requestsList = hostsData?.[1] ?? [];
+
+  const organizationsList = activeTab === "organizations" ? await listOrganizations() : [];
 
   return (
     <div>
@@ -60,7 +69,7 @@ export async function AdminPage({ tab = "overview" }: { tab?: string }) {
                   borderColor: activeTab === item ? "var(--accent)" : "var(--paper)",
                 }}
               >
-                {item}
+                {tabLabel(item)}
               </Link>
             ))}
           </div>
@@ -79,6 +88,7 @@ export async function AdminPage({ tab = "overview" }: { tab?: string }) {
 
         {activeTab === "events" ? <EventsTable /> : null}
         {activeTab === "hosts" ? <AdminHostsSection hosts={hostsList} requests={requestsList} /> : null}
+        {activeTab === "organizations" ? <AdminOrganizationsSection organizations={organizationsList} /> : null}
         {activeTab === "players" ? <PlayersTable /> : null}
         {activeTab === "venues" ? <VenuesTable /> : null}
         {activeTab === "reports" ? <ReportsTable /> : null}

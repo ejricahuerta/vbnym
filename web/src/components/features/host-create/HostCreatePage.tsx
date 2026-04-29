@@ -1,14 +1,14 @@
 import type { ReactElement } from "react";
-
 import { redirect } from "next/navigation";
 
 import { HostFormClient } from "@/components/features/host-create/HostFormClient";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { getHostSessionEmail } from "@/lib/auth";
+import { listOrganizations } from "@/server/queries/organizations";
 
 export async function HostCreatePage(): Promise<ReactElement> {
-  const hostSessionEmail = await getHostSessionEmail();
+  const [hostSessionEmail, organizations] = await Promise.all([getHostSessionEmail(), listOrganizations()]);
 
   if (!hostSessionEmail) {
     redirect("/host/login");
@@ -34,7 +34,7 @@ export async function HostCreatePage(): Promise<ReactElement> {
         </div>
       </section>
       <section style={{ maxWidth: 1280, margin: "0 auto", padding: "32px 18px 40px" }}>
-        <HostFormClient hostSessionEmail={hostSessionEmail} />
+        <HostFormClient hostSessionEmail={hostSessionEmail} organizations={organizations} />
       </section>
       <SiteFooter />
     </div>

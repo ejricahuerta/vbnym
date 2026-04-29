@@ -16,19 +16,41 @@ export async function submitHostAccessRequest(
   formData: FormData
 ): Promise<ActionResult<SubmitHostAccessRequestData>> {
   const parsed = parseHostAccessRequest(formData);
-  if (!parsed) {
-    return { ok: false, error: "Enter your name and a valid email." };
+  if (!parsed.ok) {
+    return { ok: false, error: parsed.error };
   }
 
-  if (await isApprovedHostEmail(parsed.email)) {
+  if (await isApprovedHostEmail(parsed.data.email)) {
     return { ok: true, data: { duplicate: false, alreadyHost: true } };
   }
 
   const supabase = createServerSupabase();
+
+  const { data: orgRow } = await supabase
+    .from("organizations")
+    .select("id")
+    .eq("id", parsed.data.organizationId)
+    .maybeSingle<{ id: string }>();
+  if (!orgRow) {
+    return { ok: false, error: "Pick a valid organization." };
+  }
+
+  if (parsed.data.contextGameId) {
+    const { data: gameRow } = await supabase
+      .from("games")
+      .select("id")
+      .eq("id", parsed.data.contextGameId)
+      .eq("status", "live")
+      .maybeSingle<{ id: string }>();
+    if (!gameRow) {
+      return { ok: false, error: "That game is not available for context." };
+    }
+  }
+
   const { data: pending } = await supabase
     .from("host_access_requests")
     .select("id")
-    .eq("email", parsed.email)
+    .eq("email", parsed.data.email)
     .eq("status", "pending")
     .maybeSingle<{ id: string }>();
 
@@ -37,10 +59,12 @@ export async function submitHostAccessRequest(
   }
 
   const { error } = await supabase.from("host_access_requests").insert({
-    email: parsed.email,
-    name: parsed.name,
-    message: parsed.message ?? null,
+    email: parsed.data.email,
+    name: parsed.data.name,
+    message: parsed.data.message ?? null,
     status: "pending",
+    organization_id: parsed.data.organizationId,
+    context_game_id: parsed.data.contextGameId ?? null,
   });
 
   if (error) {
