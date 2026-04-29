@@ -4,10 +4,27 @@ import { LiabilityWaiverSection } from "@/components/legal/LiabilityWaiverSectio
 import { RegistrationPoliciesSection } from "@/components/legal/RegistrationPoliciesSection";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
+import { SeoJsonLd } from "@/components/shared/SeoJsonLd";
+import { buildBreadcrumbSchema, buildLegalWebPageSchema } from "@/lib/seo-schema";
 
 export function PlayerPoliciesPage() {
+  const schemaData = [
+    buildBreadcrumbSchema([
+      { name: "Home", path: "/" },
+      { name: "Player policies and waiver", path: "/player-policies" },
+    ]),
+    buildLegalWebPageSchema({
+      title: "Player policies and waiver",
+      description:
+        "Registration timing, waitlist, cancellation, refund, and liability waiver rules for 6IX BACK Volleyball.",
+      path: "/player-policies",
+      effectiveDate: "2026-04-13",
+    }),
+  ];
+
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)" }}>
+      <SeoJsonLd data={schemaData} />
       <SiteHeader />
       <main style={{ maxWidth: 720, margin: "0 auto", padding: "36px 18px 56px" }}>
         <p className="mono" style={{ margin: 0, fontSize: 11, letterSpacing: ".14em", fontWeight: 700, color: "var(--ink-3)" }}>

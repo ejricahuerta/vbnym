@@ -3,8 +3,10 @@ import { notFound } from "next/navigation";
 
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
+import { SeoJsonLd } from "@/components/shared/SeoJsonLd";
 import { SignupForm } from "@/components/features/detail/SignupForm";
 import { KindBadge } from "@/components/shared/UiPrimitives";
+import { buildBreadcrumbSchema, buildGameEventSchema } from "@/lib/seo-schema";
 import { getHostSessionEmail } from "@/lib/auth";
 import { getGameWithRoster } from "@/server/queries/games";
 
@@ -83,9 +85,18 @@ export async function GameDetailPage({ gameId }: { gameId: string }) {
   const chipOutline = dark
     ? { borderColor: "var(--paper)", color: "var(--paper)" }
     : {};
+  const schemaData = [
+    buildBreadcrumbSchema([
+      { name: "Home", path: "/" },
+      { name: "Browse", path: "/browse" },
+      { name: game.title, path: `/games/${game.id}` },
+    ]),
+    buildGameEventSchema(game),
+  ];
 
   return (
     <div>
+      <SeoJsonLd data={schemaData} />
       <SiteHeader />
       <section
         style={{

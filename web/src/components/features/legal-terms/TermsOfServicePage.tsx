@@ -3,6 +3,8 @@ import type { CSSProperties, ReactNode } from "react";
 
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
+import { SeoJsonLd } from "@/components/shared/SeoJsonLd";
+import { buildBreadcrumbSchema, buildLegalWebPageSchema } from "@/lib/seo-schema";
 
 const accentLink: CSSProperties = {
   color: "var(--accent-deep)",
@@ -21,8 +23,23 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 }
 
 export function TermsOfServicePage() {
+  const schemaData = [
+    buildBreadcrumbSchema([
+      { name: "Home", path: "/" },
+      { name: "Terms of Service", path: "/terms" },
+    ]),
+    buildLegalWebPageSchema({
+      title: "Terms of Service",
+      description:
+        "Terms governing use of 6IX BACK Volleyball services, registrations, payments, and player conduct.",
+      path: "/terms",
+      effectiveDate: "2026-04-13",
+    }),
+  ];
+
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)" }}>
+      <SeoJsonLd data={schemaData} />
       <SiteHeader />
       <main style={{ maxWidth: 720, margin: "0 auto", padding: "36px 18px 56px" }}>
         <p className="mono" style={{ margin: 0, fontSize: 11, letterSpacing: ".14em", fontWeight: 700, color: "var(--ink-3)" }}>
