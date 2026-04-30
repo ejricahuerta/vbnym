@@ -60,7 +60,7 @@ export async function AdminPage({ tab = "overview" }: { tab?: string }) {
               <Link
                 key={item}
                 href={`/admin?tab=${item}`}
-                className="admin-tab-pill"
+                className="admin-tab-pill motion-press"
                 style={{
                   padding: "8px 13px",
                   fontSize: 12.5,
@@ -93,8 +93,7 @@ export async function AdminPage({ tab = "overview" }: { tab?: string }) {
         {activeTab === "venues" ? <VenuesTable /> : null}
         {activeTab === "reports" ? <ReportsTable /> : null}
         <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
-          <a href="/api/gmail/oauth/start" className="btn accent">Connect Gmail</a>
-          <Link href="/browse" className="btn ghost">Events</Link>
+          <Link href="/browse" className="btn ghost motion-press">Events</Link>
         </div>
       </section>
       <SiteFooter />

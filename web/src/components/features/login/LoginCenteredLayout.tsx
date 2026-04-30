@@ -48,7 +48,7 @@ export function LoginCenteredLayout({
           {leftDescription ? <p className="login-shell-lede">{leftDescription}</p> : null}
         </header>
 
-        <section aria-labelledby="login-card-heading" className="card login-shell-card">
+        <section aria-labelledby="login-card-heading" className="card login-shell-card motion-sheet-panel">
           <h2
             id="login-card-heading"
             className={rightTitle ? "display login-shell-card-title" : "sr-only login-shell-card-title"}

@@ -78,7 +78,7 @@ export function AdminMagicLinkForm() {
             One-time link, expires in {MAGIC_LINK_TTL_MIN} min.
           </p>
         </div>
-        <button type="submit" className="btn accent" disabled={pending || !email.includes("@")} aria-busy={pending} style={{ width: "100%", marginTop: 4 }}>
+        <button type="submit" className="btn accent motion-press" disabled={pending || !email.includes("@")} aria-busy={pending} style={{ width: "100%", marginTop: 4 }}>
           {pending ? "Sending…" : "Email sign-in link"}
         </button>
       </form>

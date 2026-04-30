@@ -24,16 +24,18 @@ export async function HostDashboardPage(): Promise<ReactElement> {
   const hostGmailConnected = await isHostGmailConnected(hostSessionEmail);
 
   return (
-    <div>
+    <div className="host-dashboard-page">
       <SiteHeader />
-      <Suspense fallback={null}>
-        <HostDashboardClient
-          games={games}
-          signupsByGameId={signupsByGameId}
-          hostGmailConnected={hostGmailConnected}
-        />
-      </Suspense>
-      <SiteFooter />
+      <div className="host-dashboard-page-scroll">
+        <Suspense fallback={null}>
+          <HostDashboardClient
+            games={games}
+            signupsByGameId={signupsByGameId}
+            hostGmailConnected={hostGmailConnected}
+          />
+        </Suspense>
+        <SiteFooter />
+      </div>
     </div>
   );
 }

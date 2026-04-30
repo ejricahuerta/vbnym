@@ -6,6 +6,7 @@ import {
   buildPlayerPendingReminderEmailTemplate,
 } from "@/lib/email-templates";
 import { appOrigin, requiredEnv } from "@/lib/env";
+import { hostGmailConnectionId } from "@/lib/host-gmail";
 import { createPlayerCancelSignupLinkToken } from "@/lib/magic-link";
 import { extractPaymentCodes } from "@/lib/payment-code";
 import { PAYMENT_CODE_EXPIRY_MINUTES } from "@/lib/registration-policy";
@@ -43,13 +44,6 @@ type GameRow = {
   host_email: string;
   price_cents: number;
   signed_count: number;
-};
-
-export type GmailOAuthStateV1 = {
-  v: 1;
-  csrf?: string;
-  mode: "universal" | "game";
-  gameId?: string;
 };
 
 export function createGoogleOAuthClient(redirectUri?: string) {
@@ -152,58 +146,50 @@ async function findRecentPaymentHits(refreshToken: string): Promise<GmailMessage
   return hits;
 }
 
-export function encodeGmailOAuthState(payload: GmailOAuthStateV1): string {
-  return Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
-}
-
-export function decodeGmailOAuthState(raw: string | null): GmailOAuthStateV1 | null {
-  if (!raw?.trim()) return null;
-  try {
-    const parsed = JSON.parse(Buffer.from(raw, "base64url").toString("utf8")) as GmailOAuthStateV1;
-    if (parsed.v !== 1) return null;
-    if (parsed.mode !== "universal" && parsed.mode !== "game") return null;
-    if (parsed.mode === "game" && !parsed.gameId?.trim()) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
 export async function syncPaidSignupsFromGmail(): Promise<{ matched: number; expired: number; reminded: number }> {
   const supabase = createServerSupabase();
-  const { data: syncRows } = await supabase
-    .from("game_email_sync_config")
-    .select("game_id, preferred_gmail_connection_id")
-    .not("preferred_gmail_connection_id", "is", null);
-  const configRows = (syncRows ?? []) as { game_id: string; preferred_gmail_connection_id: string | null }[];
-  const preferredConnectionIds = [
-    ...new Set(configRows.map((row) => row.preferred_gmail_connection_id?.trim() ?? "").filter(Boolean)),
-  ];
-  if (preferredConnectionIds.length === 0) return { matched: 0, expired: 0, reminded: 0 };
 
+  const { data: liveGamesData } = await supabase
+    .from("games")
+    .select("id, host_email")
+    .eq("status", "live");
+  const liveGames = (liveGamesData ?? []) as { id: string; host_email: string }[];
+  if (liveGames.length === 0) return { matched: 0, expired: 0, reminded: 0 };
+
+  const gamesByHost = new Map<string, string[]>();
+  for (const game of liveGames) {
+    const host = game.host_email?.trim().toLowerCase() ?? "";
+    if (!host) continue;
+    const list = gamesByHost.get(host) ?? [];
+    list.push(game.id);
+    gamesByHost.set(host, list);
+  }
+  if (gamesByHost.size === 0) return { matched: 0, expired: 0, reminded: 0 };
+
+  const hostConnectionIds = [...gamesByHost.keys()].map((host) => hostGmailConnectionId(host));
   const { data: activeConnections } = await supabase
     .from("gmail_connections")
     .select("id, refresh_token")
-    .in("id", preferredConnectionIds)
+    .in("id", hostConnectionIds)
     .eq("active", true);
-  const connectionRows = (activeConnections ?? []) as GmailConnectionRow[];
-  const activeConnectionIds = new Set(connectionRows.map((row) => row.id));
-  const automatedGameIds = configRows
-    .filter((row) => {
-      const id = row.preferred_gmail_connection_id?.trim() ?? "";
-      return Boolean(id) && activeConnectionIds.has(id);
-    })
-    .map((row) => row.game_id);
-  if (automatedGameIds.length === 0) return { matched: 0, expired: 0, reminded: 0 };
 
-  const refreshTokens = [
-    ...new Set(
-      connectionRows
-        .map((row) => row.refresh_token?.trim() ?? "")
-        .filter((row): row is string => Boolean(row))
-    ),
-  ];
-  if (refreshTokens.length === 0) return { matched: 0, expired: 0, reminded: 0 };
+  const tokenByHost = new Map<string, string>();
+  for (const row of (activeConnections ?? []) as GmailConnectionRow[]) {
+    const refreshToken = row.refresh_token?.trim() ?? "";
+    if (!refreshToken) continue;
+    const host = String(row.id).replace(/^host:/, "");
+    tokenByHost.set(host, refreshToken);
+  }
+  if (tokenByHost.size === 0) return { matched: 0, expired: 0, reminded: 0 };
+
+  const gameIdsByHost = new Map<string, string[]>();
+  const automatedGameIds: string[] = [];
+  for (const [host, gameIds] of gamesByHost) {
+    if (!tokenByHost.has(host)) continue;
+    gameIdsByHost.set(host, gameIds);
+    automatedGameIds.push(...gameIds);
+  }
+  if (automatedGameIds.length === 0) return { matched: 0, expired: 0, reminded: 0 };
 
   const [{ data: pendingRows }, { data: gamesData }] = await Promise.all([
     supabase
@@ -221,83 +207,91 @@ export async function syncPaidSignupsFromGmail(): Promise<{ matched: number; exp
   if (pending.length === 0) return { matched: 0, expired: 0, reminded: 0 };
   const gameById = new Map(((gamesData ?? []) as GameRow[]).map((game) => [game.id, game]));
 
-  const hitByCode = new Map<string, GmailMessageHit>();
-  for (const token of refreshTokens) {
+  let matched = 0;
+  const matchedSignupIds = new Set<string>();
+
+  for (const [host, gameIds] of gameIdsByHost) {
+    const refreshToken = tokenByHost.get(host);
+    if (!refreshToken) continue;
+    const gameIdSet = new Set(gameIds);
+    const hostSignups = pending.filter((row) => gameIdSet.has(row.game_id));
+    if (hostSignups.length === 0) continue;
+
+    const hitByCode = new Map<string, GmailMessageHit>();
     try {
-      const hits = await findRecentPaymentHits(token);
+      const hits = await findRecentPaymentHits(refreshToken);
       for (const hit of hits) {
         if (!hitByCode.has(hit.code)) hitByCode.set(hit.code, hit);
       }
     } catch (error) {
       if (!isInvalidGrantError(error)) throw error;
+      continue;
     }
-  }
 
-  let matched = 0;
-  const matchedSignupIds = new Set<string>();
-  for (const row of pending) {
-    const code = row.payment_code.toUpperCase();
-    const hit = hitByCode.get(code);
-    if (!hit) continue;
-    if (!shouldAcceptSender(hit.senderEmail, row.player_email)) continue;
-    const { data: updatedSignup, error } = await supabase
-      .from("signups")
-      .update({ payment_status: "paid" })
-      .eq("id", row.id)
-      .neq("payment_status", "paid")
-      .select("id")
-      .maybeSingle<{ id: string }>();
-    if (!error && updatedSignup?.id) {
-      matched += 1;
-      matchedSignupIds.add(row.id);
-      const game = gameById.get(row.game_id);
-      if (game) {
-        const cancelExpiryMs = Date.parse(game.starts_at) - 2 * 60 * 60 * 1000;
-        const canCancel = Number.isFinite(cancelExpiryMs) && cancelExpiryMs > Date.now();
-        const cancelToken = canCancel
-          ? createPlayerCancelSignupLinkToken({
-              gameId: game.id,
-              signupId: row.id,
-              playerEmail: row.player_email,
-              expiresAtMs: cancelExpiryMs,
-            })
-          : null;
-        const startsAtDisplay = new Date(game.starts_at).toLocaleString("en-CA", {
-          weekday: "short",
-          month: "short",
-          day: "numeric",
-          hour: "numeric",
-          minute: "2-digit",
-        });
-        const template = buildPlayerPaymentConfirmedEmailTemplate({
-          gameTitle: game.title,
-          startsAtDisplay,
-          playerName: row.player_name,
-          hostName: game.host_name,
-          hostEmail: game.host_email,
-          amountCents: game.price_cents,
-          sourceLabel: "the automated payment checker",
-          canCancel: Boolean(cancelToken),
-          cancellationUrl: cancelToken
-            ? `${appOrigin().replace(/\/$/, "")}/api/signup/cancel?t=${encodeURIComponent(cancelToken)}`
-            : null,
-        });
-        await sendTransactionalEmailResult({
-          to: row.player_email,
-          subject: template.subject,
-          html: template.html,
-          text: template.text,
-        });
+    for (const row of hostSignups) {
+      const code = row.payment_code.toUpperCase();
+      const hit = hitByCode.get(code);
+      if (!hit) continue;
+      if (!shouldAcceptSender(hit.senderEmail, row.player_email)) continue;
+      const { data: updatedSignup, error } = await supabase
+        .from("signups")
+        .update({ payment_status: "paid" })
+        .eq("id", row.id)
+        .neq("payment_status", "paid")
+        .select("id")
+        .maybeSingle<{ id: string }>();
+      if (!error && updatedSignup?.id) {
+        matched += 1;
+        matchedSignupIds.add(row.id);
+        const game = gameById.get(row.game_id);
+        if (game) {
+          const cancelExpiryMs = Date.parse(game.starts_at) - 2 * 60 * 60 * 1000;
+          const canCancel = Number.isFinite(cancelExpiryMs) && cancelExpiryMs > Date.now();
+          const cancelToken = canCancel
+            ? createPlayerCancelSignupLinkToken({
+                gameId: game.id,
+                signupId: row.id,
+                playerEmail: row.player_email,
+                expiresAtMs: cancelExpiryMs,
+              })
+            : null;
+          const startsAtDisplay = new Date(game.starts_at).toLocaleString("en-CA", {
+            weekday: "short",
+            month: "short",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+          });
+          const template = buildPlayerPaymentConfirmedEmailTemplate({
+            gameTitle: game.title,
+            startsAtDisplay,
+            playerName: row.player_name,
+            hostName: game.host_name,
+            hostEmail: game.host_email,
+            amountCents: game.price_cents,
+            sourceLabel: "the automated payment checker",
+            canCancel: Boolean(cancelToken),
+            cancellationUrl: cancelToken
+              ? `${appOrigin().replace(/\/$/, "")}/api/signup/cancel?t=${encodeURIComponent(cancelToken)}`
+              : null,
+          });
+          await sendTransactionalEmailResult({
+            to: row.player_email,
+            subject: template.subject,
+            html: template.html,
+            text: template.text,
+          });
+        }
       }
+      await supabase.from("payment_events").insert({
+        game_id: row.game_id,
+        signup_id: row.id,
+        payment_code: code,
+        source: "gmail",
+        matched: !error,
+        raw_payload: { messageId: hit.messageId, senderEmail: hit.senderEmail },
+      });
     }
-    await supabase.from("payment_events").insert({
-      game_id: row.game_id,
-      signup_id: row.id,
-      payment_code: code,
-      source: "gmail",
-      matched: !error,
-      raw_payload: { messageId: hit.messageId, senderEmail: hit.senderEmail },
-    });
   }
 
   const nowMs = Date.now();
@@ -388,7 +382,7 @@ export async function syncPaidSignupsFromGmail(): Promise<{ matched: number; exp
   for (const row of expiryCandidates) {
     const { error } = await supabase
       .from("signups")
-      .update({ status: "canceled" })
+      .update({ status: "removed" })
       .eq("id", row.id)
       .eq("status", "active")
       .neq("payment_status", "paid");

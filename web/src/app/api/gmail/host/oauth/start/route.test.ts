@@ -50,7 +50,6 @@ describe("api/gmail/host/oauth/start", () => {
     expectRedirectTo(response, "https://accounts.google.test/host-auth");
     const setCookie = response.headers.get("set-cookie") ?? "";
     expect(setCookie).toContain("gmail_oauth_state=host-state");
-    expect(setCookie).toContain("gmail_oauth_flow=host");
     uuidSpy.mockRestore();
   });
 });

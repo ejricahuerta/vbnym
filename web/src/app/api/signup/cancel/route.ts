@@ -18,14 +18,16 @@ export async function GET(req: NextRequest): Promise<Response> {
   const supabase = createServerSupabase();
   const { data: signup, error: signupErr } = await supabase
     .from("signups")
-    .select("id, game_id, player_email, status, payment_status")
+    .select("id, game_id, player_email, status, payment_status, added_by_name, added_by_email")
     .eq("id", parsed.signupId)
     .eq("game_id", parsed.gameId)
     .maybeSingle<{
       id: string;
       game_id: string;
       player_email: string;
-      status: "active" | "waitlist" | "canceled" | "removed" | "deleted";
+      added_by_name: string;
+      added_by_email: string;
+      status: "active" | "waitlist" | "removed" | "deleted";
       payment_status: "paid" | "pending" | "refund" | "canceled";
     }>();
   if (signupErr || !signup) {
@@ -36,7 +38,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     return NextResponse.redirect(resultUrl("invalid"));
   }
 
-  if (signup.status === "canceled" || signup.status === "removed" || signup.status === "deleted") {
+  if (signup.status === "removed" || signup.status === "deleted") {
     return NextResponse.redirect(resultUrl("done"));
   }
 
@@ -60,7 +62,12 @@ export async function GET(req: NextRequest): Promise<Response> {
 
   const { error: cancelErr } = await supabase
     .from("signups")
-    .update({ status: "canceled", payment_status: "refund" })
+    .update({
+      status: "removed",
+      payment_status: "refund",
+      refund_owner_name: signup.added_by_name,
+      refund_owner_email: signup.added_by_email,
+    })
     .eq("id", parsed.signupId)
     .eq("game_id", parsed.gameId)
     .in("status", ["active", "waitlist"]);

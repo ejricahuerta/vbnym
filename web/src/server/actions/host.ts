@@ -4,7 +4,10 @@ import { revalidatePath } from "next/cache";
 
 import { signupForGame } from "@/server/actions/signup";
 import { getHostSessionEmail } from "@/lib/auth";
+import { buildGmailConnectForPaymentSyncEmailTemplate } from "@/lib/email-templates";
 import { isGameKindComingSoon } from "@/lib/game-kind-availability";
+import { appOrigin } from "@/lib/env";
+import { sendTransactionalEmailResult } from "@/lib/send-email";
 import { createServerSupabase } from "@/lib/supabase-server";
 import {
   parseHostInteracEmailFormData,
@@ -98,9 +101,9 @@ export async function updateHostInteracEmail(formData: FormData): Promise<Action
   const normalizedSession = sessionEmail.trim().toLowerCase();
   const { data: row, error: fetchError } = await supabase
     .from("games")
-    .select("id, owner_email")
+    .select("id, owner_email, host_email")
     .eq("id", parsed.data.gameId)
-    .maybeSingle<{ id: string; owner_email: string }>();
+    .maybeSingle<{ id: string; owner_email: string; host_email: string }>();
 
   if (fetchError || !row) {
     return { ok: false, error: "Game not found." };
@@ -117,6 +120,21 @@ export async function updateHostInteracEmail(formData: FormData): Promise<Action
 
   if (updateError) {
     return { ok: false, error: updateError.message ?? "Could not update Interac email." };
+  }
+
+  const nextHostEmail = parsed.data.hostEmail.trim().toLowerCase();
+  const previousHostEmail = row.host_email.trim().toLowerCase();
+  if (nextHostEmail !== previousHostEmail) {
+    const template = buildGmailConnectForPaymentSyncEmailTemplate({
+      reconnectUrl: `${appOrigin()}/api/gmail/host/oauth/start`,
+      reason: "payment_email_update",
+    });
+    await sendTransactionalEmailResult({
+      to: sessionEmail,
+      subject: template.subject,
+      html: template.html,
+      text: template.text,
+    });
   }
 
   revalidatePath("/browse");

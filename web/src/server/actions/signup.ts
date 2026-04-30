@@ -16,7 +16,9 @@ import { createServerSupabase } from "@/lib/supabase-server";
 import type { ActionResult } from "@/types/action-result";
 import { parseSignupFormData } from "@/types/schemas/signup";
 
-export async function signupForGame(formData: FormData): Promise<ActionResult<{ signupId: string; paymentCode: string; waitlist: boolean }>> {
+export async function signupForGame(
+  formData: FormData
+): Promise<ActionResult<{ signupId: string; paymentCode: string; waitlist: boolean; amountCents: number; playerCount: number }>> {
   const parsed = parseSignupFormData(formData);
   if (!parsed.ok) return parsed;
 
@@ -56,51 +58,56 @@ export async function signupForGame(formData: FormData): Promise<ActionResult<{ 
   const playerOrganizationName = orgRow.name.trim();
 
   const signupId = randomUUID();
+  const signupGroupId = randomUUID();
+  const rosterPlayers = parsed.data.includeSigner
+    ? [parsed.data.addedByName, ...parsed.data.players]
+    : [...parsed.data.players];
+  const playerCount = rosterPlayers.length;
+  const amountCents = game.price_cents * playerCount;
   const waitlist = game.signed_count >= game.capacity;
   const paymentCode = generatePaymentCode({
     gameId: parsed.data.gameId,
     signupId,
-    playerEmail: parsed.data.playerEmail,
+    playerEmail: parsed.data.addedByEmail,
   });
 
-  const { error } = await supabase.from("signups").insert({
-    id: signupId,
+  const signupRows = rosterPlayers.map((playerName, index) => ({
+    id: index === 0 ? signupId : randomUUID(),
     game_id: parsed.data.gameId,
-    player_name: parsed.data.playerName,
-    player_email: parsed.data.playerEmail,
+    player_name: playerName,
+    player_email: parsed.data.addedByEmail,
     organization_id: DEFAULT_ORGANIZATION_ID,
-    payment_code: paymentCode,
+    payment_code: index === 0 ? paymentCode : `${paymentCode}-${index + 1}`,
     payment_status: "pending",
     status: waitlist ? "waitlist" : "active",
-  });
+    signup_group_id: signupGroupId,
+    added_by_name: parsed.data.addedByName,
+    added_by_email: parsed.data.addedByEmail,
+    refund_owner_name: parsed.data.addedByName,
+    refund_owner_email: parsed.data.addedByEmail,
+    is_primary_signup: index === 0,
+  }));
+
+  const { error } = await supabase.from("signups").insert(signupRows);
   if (error) return { ok: false, error: error.message };
 
   await supabase
     .from("games")
     .update(
       waitlist
-        ? { waitlist_count: game.waitlist_count + 1 }
-        : { signed_count: game.signed_count + 1 }
+        ? { waitlist_count: game.waitlist_count + playerCount }
+        : { signed_count: game.signed_count + playerCount }
     )
     .eq("id", parsed.data.gameId);
 
-  const { data: syncConfig } = await supabase
-    .from("game_email_sync_config")
-    .select("preferred_gmail_connection_id")
-    .eq("game_id", parsed.data.gameId)
-    .maybeSingle<{ preferred_gmail_connection_id: string | null }>();
-  const preferredConnectionId = syncConfig?.preferred_gmail_connection_id?.trim() ?? "";
   const hostConnectionId = hostGmailConnectionId(game.host_email);
-  const candidateConnectionIds = [...new Set([preferredConnectionId, hostConnectionId].filter(Boolean))];
-  let manualOnly = true;
-  if (candidateConnectionIds.length > 0) {
-    const { data: activeConnections } = await supabase
-      .from("gmail_connections")
-      .select("id")
-      .in("id", candidateConnectionIds)
-      .eq("active", true);
-    manualOnly = (activeConnections?.length ?? 0) === 0;
-  }
+  const { data: hostConnection } = await supabase
+    .from("gmail_connections")
+    .select("id")
+    .eq("id", hostConnectionId)
+    .eq("active", true)
+    .maybeSingle<{ id: string }>();
+  const manualOnly = !hostConnection;
 
   const startsAtDisplay = new Date(game.starts_at).toLocaleString("en-CA", {
     weekday: "short",
@@ -116,9 +123,12 @@ export async function signupForGame(formData: FormData): Promise<ActionResult<{ 
     playerOrganizationName,
     hostName: game.host_name,
     hostEmail: game.host_email,
-    playerName: parsed.data.playerName,
+    playerName: parsed.data.addedByName,
     paymentCode,
-    amountCents: game.price_cents,
+    amountCents,
+    playerCount,
+    addedByName: parsed.data.addedByName,
+    refundOwnerName: parsed.data.addedByName,
     deadlineMinutes: PAYMENT_CODE_EXPIRY_MINUTES,
     manualOnly,
   });
@@ -127,15 +137,18 @@ export async function signupForGame(formData: FormData): Promise<ActionResult<{ 
     startsAtDisplay,
     gameOrganizerName,
     playerOrganizationName,
-    playerName: parsed.data.playerName,
-    playerEmail: parsed.data.playerEmail,
+    playerName: parsed.data.addedByName,
+    playerEmail: parsed.data.addedByEmail,
     paymentCode,
-    amountCents: game.price_cents,
+    amountCents,
+    playerCount,
+    addedByName: parsed.data.addedByName,
+    refundOwnerName: parsed.data.addedByName,
     manualOnly,
   });
   await Promise.all([
     sendTransactionalEmailResult({
-      to: parsed.data.playerEmail,
+      to: parsed.data.addedByEmail,
       subject: playerTemplate.subject,
       html: playerTemplate.html,
       text: playerTemplate.text,
@@ -151,5 +164,5 @@ export async function signupForGame(formData: FormData): Promise<ActionResult<{ 
   revalidatePath("/browse");
   revalidatePath(`/games/${parsed.data.gameId}`);
   revalidatePath("/admin");
-  return { ok: true, data: { signupId, paymentCode, waitlist } };
+  return { ok: true, data: { signupId, paymentCode, waitlist, amountCents, playerCount } };
 }

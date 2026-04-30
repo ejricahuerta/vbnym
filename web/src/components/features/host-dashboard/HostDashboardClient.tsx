@@ -2,8 +2,16 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { type CSSProperties, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import {
+  type CSSProperties,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { gameOrganizationDisplayName } from "@/lib/game-organization";
 import type { GameRow, SignupPaymentStatus, SignupRow } from "@/types/domain";
 
@@ -159,7 +167,7 @@ function HostPayoutAndGmailCard(props: HostPayoutAndGmailCardProps) {
     ) : null;
 
   return (
-    <div className="card" style={{ padding: 0, marginBottom: 18, overflow: "hidden" }}>
+    <div className="card host-dashboard-payout-card" style={{ padding: 0, marginBottom: 18, overflow: "hidden" }}>
       <div style={{ padding: "12px 14px 0" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
           <div className="label">Host payouts</div>
@@ -196,7 +204,10 @@ function HostPayoutAndGmailCard(props: HostPayoutAndGmailCardProps) {
               minWidth: 0,
             }}
           >
-            <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 44px", gap: 10, width: "100%", minWidth: 0 }}>
+            <div
+              className="host-dashboard-payout-interac-row"
+              style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 44px", gap: 10, width: "100%", minWidth: 0 }}
+            >
               <input
                 className="input"
                 type="email"
@@ -402,16 +413,31 @@ export function HostDashboardClient({
     if (filter === "refund") return rosterArchivedRows.filter((r) => r.payment_status === "refund");
     return rosterArchivedRows.filter((r) => r.payment_status === "canceled");
   }, [filter, rosterActiveRows, rosterArchivedRows]);
-  const visibleRosterRows = useMemo<(SignupRow | null)[]>(() => {
+  /** Desktop table: pad with null rows up to capacity (open spots). */
+  const paddedRosterRows = useMemo<(SignupRow | null)[]>(() => {
     if (filter === "refund" || filter === "canceled") return filteredRoster;
     const capacity = selectedGame?.capacity ?? 0;
     const placeholders = Math.max(capacity - filteredRoster.length, 0);
     return [...filteredRoster, ...Array.from({ length: placeholders }, () => null)];
   }, [filter, filteredRoster, selectedGame?.capacity]);
-  const displayedRosterRows = useMemo(
-    () => visibleRosterRows.slice(0, rosterRowsVisible),
-    [visibleRosterRows, rosterRowsVisible]
+  const displayedPaddedRows = useMemo(
+    () => paddedRosterRows.slice(0, rosterRowsVisible),
+    [paddedRosterRows, rosterRowsVisible]
   );
+  /** Mobile: only real signups — no per-slot placeholder cards (avoids long OPEN SPOT scroll). */
+  const displayedMobilePlayers = useMemo(
+    () => filteredRoster.slice(0, rosterRowsVisible),
+    [filteredRoster, rosterRowsVisible]
+  );
+  const isNarrowViewport = useMediaQuery("(max-width: 920px)");
+  const rosterPagerTotal = isNarrowViewport ? filteredRoster.length : paddedRosterRows.length;
+
+  /** Desktop can show OPEN SPOT placeholder rows; mobile only lists real signups. Avoid treating padded rows as “has content” for the empty state. */
+  const showHostRosterSection = useMemo(() => {
+    if (filteredRoster.length > 0) return true;
+    if (filter === "refund" || filter === "canceled") return false;
+    return (selectedGame?.capacity ?? 0) > 0;
+  }, [filteredRoster.length, filter, selectedGame?.capacity]);
 
   useEffect(() => {
     setRosterRowsVisible(10);
@@ -444,12 +470,6 @@ export function HostDashboardClient({
         setRosterSavingSignupId(null);
       }
     });
-  }
-
-  function copyEmails(): void {
-    const text = rosterActiveRows.map((r) => r.player_email).join("\n");
-    if (typeof navigator === "undefined" || !navigator.clipboard) return;
-    void navigator.clipboard.writeText(text);
   }
 
   function copyReminderMessage(): void {
@@ -646,7 +666,7 @@ export function HostDashboardClient({
 
   if (!games.length) {
     return (
-      <section style={{ maxWidth: 1280, margin: "0 auto", padding: "48px 18px 60px" }}>
+      <section className="host-dashboard-main host-dashboard-empty">
         {gmailFlash ? (
           <HostGmailNotice tone={gmailFlash.tone} message={gmailFlash.text} style={{ marginBottom: 18 }} />
         ) : null}
@@ -671,61 +691,48 @@ export function HostDashboardClient({
 
   return (
     <>
-      <section style={{ borderBottom: "2px solid var(--ink)", background: "var(--ink)", color: "var(--paper)" }}>
-        <div style={{ maxWidth: 1280, margin: "0 auto", padding: "40px 18px" }}>
-          <div className="label" style={{ marginBottom: 10, color: "rgba(251,248,241,.5)" }}>Host dashboard</div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 20, flexWrap: "wrap", marginBottom: 32 }}>
-            <div style={{ display: "grid", gap: 12, minWidth: 0 }}>
-              <h1 className="display" style={{ fontSize: "clamp(40px, 7vw, 76px)", margin: 0, letterSpacing: "-.03em" }}>
-                My{" "}
-                <span className="serif-display" style={{ fontStyle: "italic", color: "var(--accent)", textTransform: "lowercase" }}>
-                  roster.
-                </span>
-              </h1>
-              <select
-                className="input xl select-input-invert browse-roster-game-select"
-                aria-label="Select game"
-                value={selectedGameId}
-                onChange={(event) => setPickedGameId(event.target.value)}
-              >
-                {games.map((game) => (
-                  <option key={game.id} value={game.id}>
-                    {game.title}
-                  </option>
-                ))}
-              </select>
-              {selectedGame ? (
-                <div className="mono" style={{ fontSize: 11, letterSpacing: ".06em", color: "rgba(251,248,241,.65)" }}>
-                  Presenting organizer · {gameOrganizationDisplayName(selectedGame)}
-                </div>
-              ) : null}
-            </div>
-            <Link href="/host/new" className="btn lg accent" style={{ height: 56, minHeight: 56 }}>
+      <section className="host-dashboard-hero" style={{ borderBottom: "2px solid var(--ink)", background: "var(--ink)", color: "var(--paper)" }}>
+        <div className="host-dashboard-hero-inner">
+          <div className="label" style={{ color: "rgba(251,248,241,.5)" }}>Host dashboard</div>
+          <h1 className="display host-dashboard-hero-title" style={{ fontSize: "clamp(40px, 7vw, 76px)", margin: 0, letterSpacing: "-.03em" }}>
+            My{" "}
+            <span className="serif-display" style={{ fontStyle: "italic", color: "var(--accent)", textTransform: "lowercase" }}>
+              roster.
+            </span>
+          </h1>
+          <div className="host-dashboard-hero-actions">
+            <select
+              className="input xl select-input-invert browse-roster-game-select host-dashboard-game-select"
+              aria-label="Select game"
+              value={selectedGameId}
+              onChange={(event) => setPickedGameId(event.target.value)}
+            >
+              {games.map((game) => (
+                <option key={game.id} value={game.id}>
+                  {game.title}
+                </option>
+              ))}
+            </select>
+            <Link href="/host/new" className="btn lg accent host-dashboard-hero-cta" style={{ height: 56, minHeight: 56 }}>
               Host a new game
             </Link>
           </div>
-          <div className="host-kpi-grid" style={{ display: "grid", gridTemplateColumns: "1fr", gap: 10 }}>
-            <Stat label="Signed up" value={`${rosterActiveRows.length}/${selectedGame?.capacity ?? 0}`} accent />
-            <Stat label="Paid" value={String(totals.paid)} sub={`$${collected} collected`} />
-            <Stat label="Pending" value={String(totals.pending)} sub="Awaiting confirm" />
-            <Stat label="Refund" value={String(totals.refund)} sub="Awaiting host refund" />
-            <Stat label="Canceled" value={String(totals.canceled)} sub="Refund completed" />
-            <Stat label="Waitlist" value={String(selectedGame?.waitlist_count ?? 0)} sub="Across this game" />
-          </div>
+          {selectedGame ? (
+            <div className="mono host-dashboard-hero-organizer" style={{ fontSize: 11, letterSpacing: ".06em", color: "rgba(251,248,241,.65)" }}>
+              Presenting organizer · {gameOrganizationDisplayName(selectedGame)}
+            </div>
+          ) : null}
         </div>
       </section>
 
-      <section style={{ maxWidth: 1280, margin: "0 auto", padding: "28px 18px 34px" }}>
+      <section className="host-dashboard-main">
         {gmailFlash ? (
           <HostGmailNotice tone={gmailFlash.tone} message={gmailFlash.text} style={{ marginBottom: 18 }} />
         ) : null}
-        <div
-          className="host-roster-content-grid"
-          style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16, alignItems: "start" }}
-        >
+        <div className="host-roster-content-grid">
           <div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, flexWrap: "wrap", gap: 12 }}>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            <div className="host-roster-toolbar">
+              <div className="host-roster-filters" role="tablist" aria-label="Roster views">
                 {[
                   { id: "all" as const, label: "All", n: rosterActiveRows.length },
                   { id: "paid" as const, label: "Paid", n: totals.paid },
@@ -736,24 +743,27 @@ export function HostDashboardClient({
                   <button
                     key={entry.id}
                     type="button"
+                    role="tab"
+                    aria-selected={filter === entry.id}
                     className="roster-filter-btn"
+                    title={`${entry.label} (${entry.n})`}
                     style={{
                       background: filter === entry.id ? "var(--ink)" : "transparent",
                       color: filter === entry.id ? "var(--paper)" : "var(--ink)",
                     }}
                     onClick={() => setFilter(entry.id)}
                   >
-                    {entry.label}{" "}
-                    <span style={{ opacity: 0.6, fontWeight: 500 }}>{entry.n}</span>
+                    <span className="roster-filter-btn-icon" aria-hidden>
+                      <RosterFilterIcon filterId={entry.id} />
+                    </span>
+                    <span className="roster-filter-btn-label">{entry.label}</span>
+                    <span className="mono roster-filter-btn-count">{entry.n}</span>
                   </button>
                 ))}
               </div>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <div className="host-roster-toolbar-actions">
                 <button type="button" className="btn sm accent" onClick={openAddPlayerModal}>
                   Add player
-                </button>
-                <button type="button" className="btn sm ghost" onClick={copyEmails} disabled={rosterActiveRows.length === 0}>
-                  Copy emails
                 </button>
               </div>
             </div>
@@ -773,126 +783,221 @@ export function HostDashboardClient({
               </div>
             ) : null}
 
-            <div className="card roster-table" style={{ padding: 0, overflow: "hidden" }}>
-          <div
-            className="mono roster-table-head"
-            style={{
-              display: "grid",
-              gridTemplateColumns:
-                "36px minmax(0, 2.25fr) minmax(84px, 0.9fr) minmax(140px, 1fr)",
-              padding: "12px 18px",
-              background: "var(--bg)",
-              borderBottom: "2px solid var(--ink)",
-              fontSize: 11,
-              fontWeight: 700,
-              letterSpacing: ".08em",
-              textTransform: "uppercase",
-              color: "var(--ink-2)",
-            }}
-          >
-            <div>#</div>
-            <div>Player</div>
-            <div>Reference</div>
-            <div style={{ textAlign: "right" }}>Status</div>
-          </div>
-          {displayedRosterRows.length === 0 ? (
-            <div style={{ padding: "24px 18px", color: "var(--ink-2)", fontSize: 14 }}>
-              No players in this view yet.
-            </div>
-          ) : (
-            displayedRosterRows.map((player, index) => (
-              <div
-                key={player ? player.id : `placeholder-${index}`}
-                className="roster-row"
-                style={{
-                  display: "grid",
-                  gridTemplateColumns:
-                    "36px minmax(0, 2.25fr) minmax(84px, 0.9fr) minmax(140px, 1fr)",
-                  alignItems: "center",
-                  padding: "14px 18px",
-                  borderBottom: index === displayedRosterRows.length - 1 ? "none" : "1px dashed var(--ink-3)",
-                  gap: 12,
-                }}
-              >
-                <div className="mono" style={{ fontSize: 12, color: "var(--ink-3)", fontWeight: 700 }}>
-                  {String(index + 1).padStart(2, "0")}
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, opacity: player ? 1 : 0.45 }}>
-                  {player ? (
-                    <>
+            {!showHostRosterSection ? (
+              <div className="card" style={{ padding: "24px 18px", color: "var(--ink-2)", fontSize: 14 }}>
+                No players in this view yet.
+              </div>
+            ) : (
+              <>
+                <div className="card roster-table host-roster-desktop-only" style={{ padding: 0, overflow: "hidden" }}>
+                  <div
+                    className="mono roster-table-head"
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns:
+                        "36px minmax(0, 2.25fr) minmax(84px, 0.9fr) minmax(140px, 1fr)",
+                      padding: "12px 18px",
+                      background: "var(--bg)",
+                      borderBottom: "2px solid var(--ink)",
+                      fontSize: 11,
+                      fontWeight: 700,
+                      letterSpacing: ".08em",
+                      textTransform: "uppercase",
+                      color: "var(--ink-2)",
+                    }}
+                  >
+                    <div>#</div>
+                    <div>Player</div>
+                    <div>Reference</div>
+                    <div style={{ textAlign: "right" }}>Status</div>
+                  </div>
+                  {displayedPaddedRows.map((player, index) => (
+                    <div
+                      key={player ? player.id : `placeholder-${index}`}
+                      className="host-dashboard-roster-row"
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns:
+                          "36px minmax(0, 2.25fr) minmax(84px, 0.9fr) minmax(140px, 1fr)",
+                        alignItems: "center",
+                        padding: "14px 18px",
+                        borderBottom: index === displayedPaddedRows.length - 1 ? "none" : "1px dashed var(--ink-3)",
+                        gap: 12,
+                      }}
+                    >
+                      <div className="mono" style={{ fontSize: 12, color: "var(--ink-3)", fontWeight: 700 }}>
+                        {String(index + 1).padStart(2, "0")}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, opacity: player ? 1 : 0.45 }}>
+                        {player ? (
+                          <>
+                            <div
+                              style={{
+                                width: 32,
+                                height: 32,
+                                borderRadius: "50%",
+                                background: "var(--accent)",
+                                border: "2px solid var(--ink)",
+                                display: "grid",
+                                placeItems: "center",
+                                fontWeight: 900,
+                                fontSize: 11,
+                              }}
+                            >
+                              {initials(player.player_name)}
+                            </div>
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontWeight: 700, fontSize: 14, overflowWrap: "anywhere" }}>
+                                {player.player_name}
+                              </div>
+                              <div className="mono" style={{ fontSize: 10.5, color: "var(--ink-3)", letterSpacing: ".06em" }}>
+                                signed {formatSignedAgo(player.created_at)}
+                              </div>
+                              <div className="mono" style={{ fontSize: 10.5, color: "var(--ink-3)", letterSpacing: ".04em", overflowWrap: "anywhere" }}>
+                                {player.player_email}
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="mono" style={{ fontSize: 10.5, color: "var(--ink-3)", letterSpacing: ".08em" }}>
+                            OPEN SPOT
+                          </div>
+                        )}
+                      </div>
+                      <div className="mono" style={{ fontSize: 12, fontWeight: 700, letterSpacing: ".06em", opacity: player ? 1 : 0.35 }}>
+                        {player ? player.payment_code : "—"}
+                      </div>
                       <div
+                        aria-busy={player ? rosterSavingSignupId === player.id : false}
                         style={{
-                          width: 32,
-                          height: 32,
-                          borderRadius: "50%",
-                          background: "var(--accent)",
-                          border: "2px solid var(--ink)",
-                          display: "grid",
-                          placeItems: "center",
-                          fontWeight: 900,
-                          fontSize: 11,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "flex-end",
+                          gap: 6,
+                          flexWrap: "wrap",
+                          minWidth: 0,
+                          opacity: player ? 1 : 0.35,
                         }}
                       >
-                        {initials(player.player_name)}
+                        {player ? (
+                          rosterSavingSignupId === player.id ? (
+                            <span className="mono" style={{ fontSize: 10, letterSpacing: ".08em", color: "var(--ink-2)" }}>
+                              Saving...
+                            </span>
+                          ) : (
+                            <HostPaymentActionsDropdown
+                              player={player}
+                              status={player.payment_status}
+                              disabled={hostRosterPending}
+                              onSelect={(next) => requestPaymentStatus(player, next)}
+                              onRemove={() => openRemovePlayerModal(player)}
+                              onDelete={() => openDeletePlayerModal(player)}
+                              onReport={() => openReportPlayerModal(player)}
+                            />
+                          )
+                        ) : (
+                          <span className="mono">—</span>
+                        )}
                       </div>
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontWeight: 700, fontSize: 14, overflowWrap: "anywhere" }}>
-                          {player.player_name}
-                        </div>
-                        <div className="mono" style={{ fontSize: 10.5, color: "var(--ink-3)", letterSpacing: ".06em" }}>
-                          signed {formatSignedAgo(player.created_at)}
-                        </div>
-                        <div className="mono" style={{ fontSize: 10.5, color: "var(--ink-3)", letterSpacing: ".04em", overflowWrap: "anywhere" }}>
-                          {player.player_email}
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="mono" style={{ fontSize: 10.5, color: "var(--ink-3)", letterSpacing: ".08em" }}>
-                      OPEN SPOT
                     </div>
-                  )}
+                  ))}
                 </div>
-                <div className="mono" style={{ fontSize: 12, fontWeight: 700, letterSpacing: ".06em", opacity: player ? 1 : 0.35 }}>
-                  {player ? player.payment_code : "—"}
+
+                <div className="host-roster-mobile-only" aria-label="Roster">
+                  {displayedMobilePlayers.map((player, index) => (
+                    <div key={player.id} className="card host-roster-mobile-card">
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+                        <div style={{ display: "flex", alignItems: "flex-start", gap: 12, minWidth: 0, flex: 1 }}>
+                          <div
+                            style={{
+                              width: 40,
+                              height: 40,
+                              flexShrink: 0,
+                              borderRadius: "50%",
+                              background: "var(--accent)",
+                              border: "2px solid var(--ink)",
+                              display: "grid",
+                              placeItems: "center",
+                              fontWeight: 900,
+                              fontSize: 12,
+                            }}
+                          >
+                            {initials(player.player_name)}
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontWeight: 800, fontSize: 15, lineHeight: 1.25, overflowWrap: "anywhere" }}>
+                              {player.player_name}
+                            </div>
+                            <div className="mono" style={{ fontSize: 10.5, color: "var(--ink-3)", letterSpacing: ".06em", marginTop: 4 }}>
+                              signed {formatSignedAgo(player.created_at)}
+                            </div>
+                            <div className="mono" style={{ fontSize: 10.5, color: "var(--ink-3)", letterSpacing: ".04em", overflowWrap: "anywhere", marginTop: 2 }}>
+                              {player.player_email}
+                            </div>
+                          </div>
+                        </div>
+                        <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)", fontWeight: 800, flexShrink: 0 }}>
+                          #{String(index + 1).padStart(2, "0")}
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          marginTop: 14,
+                          paddingTop: 14,
+                          borderTop: "2px dashed var(--ink-3)",
+                        }}
+                      >
+                        <div className="label" style={{ marginBottom: 6 }}>
+                          Reference
+                        </div>
+                        <div className="mono" style={{ fontSize: 13, fontWeight: 800, letterSpacing: ".06em" }}>
+                          {player.payment_code}
+                        </div>
+                      </div>
+                      <div style={{ marginTop: 14 }}>
+                        <div className="label" style={{ marginBottom: 8 }}>
+                          Payment status
+                        </div>
+                        {rosterSavingSignupId === player.id ? (
+                          <span className="mono" style={{ fontSize: 11, letterSpacing: ".08em", color: "var(--ink-2)" }}>
+                            Saving...
+                          </span>
+                        ) : (
+                          <HostPaymentActionsDropdown
+                            player={player}
+                            status={player.payment_status}
+                            disabled={hostRosterPending}
+                            onSelect={(next) => requestPaymentStatus(player, next)}
+                            onRemove={() => openRemovePlayerModal(player)}
+                            onDelete={() => openDeletePlayerModal(player)}
+                            onReport={() => openReportPlayerModal(player)}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {filter !== "refund" && filter !== "canceled" ? (
+                    (() => {
+                      const capacity = selectedGame?.capacity ?? 0;
+                      const openSlots = Math.max(capacity - filteredRoster.length, 0);
+                      if (openSlots <= 0) return null;
+                      return (
+                        <div className="card host-roster-mobile-card host-roster-open-spots-summary">
+                          <div className="label" style={{ marginBottom: 6 }}>
+                            Open roster spots
+                          </div>
+                          <p style={{ margin: 0, fontSize: 18, fontWeight: 800, letterSpacing: "-.02em" }}>{openSlots}</p>
+                          <p className="mono" style={{ margin: "8px 0 0", fontSize: 11, letterSpacing: ".06em", color: "var(--ink-3)" }}>
+                            Capacity {capacity} · {filteredRoster.length} filled in this view
+                          </p>
+                        </div>
+                      );
+                    })()
+                  ) : null}
                 </div>
-                <div
-                  aria-busy={player ? rosterSavingSignupId === player.id : false}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "flex-end",
-                    gap: 6,
-                    flexWrap: "wrap",
-                    minWidth: 0,
-                    opacity: player ? 1 : 0.35,
-                  }}
-                >
-                  {player ? (
-                    rosterSavingSignupId === player.id ? (
-                      <span className="mono" style={{ fontSize: 10, letterSpacing: ".08em", color: "var(--ink-2)" }}>
-                        Saving...
-                      </span>
-                    ) : (
-                      <HostPaymentActionsDropdown
-                        player={player}
-                        status={player.payment_status}
-                        disabled={hostRosterPending}
-                        onSelect={(next) => requestPaymentStatus(player, next)}
-                        onRemove={() => openRemovePlayerModal(player)}
-                        onDelete={() => openDeletePlayerModal(player)}
-                        onReport={() => openReportPlayerModal(player)}
-                      />
-                    )
-                  ) : (
-                    <span className="mono">—</span>
-                  )}
-                </div>
-              </div>
-            ))
-          )}
-          </div>
-          {filteredRoster.length > 10 && rosterRowsVisible < visibleRosterRows.length ? (
+              </>
+            )}
+          {filteredRoster.length > 10 && rosterRowsVisible < rosterPagerTotal ? (
             <div style={{ marginTop: 10, display: "flex", justifyContent: "center" }}>
               <button
                 type="button"
@@ -908,13 +1013,24 @@ export function HostDashboardClient({
               <div className="label" style={{ marginBottom: 8 }}>
                 Archived players
               </div>
-              <div style={{ display: "grid", gap: 8 }}>
+              <div style={{ display: "grid", gap: 10 }}>
                 {rosterArchivedRows.map((player) => (
-                  <div key={`archived-${player.id}`} style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-                    <span style={{ fontSize: 14 }}>
+                  <div
+                    key={`archived-${player.id}`}
+                    className="host-dashboard-archived-row"
+                  >
+                    <span style={{ fontSize: 14, minWidth: 0, overflowWrap: "anywhere" }}>
                       {player.player_name} ({player.player_email})
                     </span>
-                    <HostPaymentStatusBadge status={player.payment_status} />
+                    <HostPaymentActionsDropdown
+                      player={player}
+                      status={player.payment_status}
+                      disabled={hostRosterPending}
+                      onSelect={(next) => requestPaymentStatus(player, next)}
+                      onRemove={() => openRemovePlayerModal(player)}
+                      onDelete={() => openDeletePlayerModal(player)}
+                      onReport={() => openReportPlayerModal(player)}
+                    />
                   </div>
                 ))}
               </div>
@@ -957,7 +1073,7 @@ export function HostDashboardClient({
                   ["Outstanding (est.)", `$${outstandingEstimate}`],
                   ["Waitlist", `${selectedGame?.waitlist_count ?? 0} players`],
                 ].map(([label, value]) => (
-                  <div key={label} style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px dashed var(--ink-3)", paddingBottom: 8 }}>
+                  <div key={label} className="host-dashboard-intake-row" style={{ borderBottom: "1px dashed var(--ink-3)", paddingBottom: 8 }}>
                     <span className="mono" style={{ fontSize: 11, letterSpacing: ".08em", color: "var(--ink-3)" }}>
                       {label}
                     </span>
@@ -974,6 +1090,7 @@ export function HostDashboardClient({
         {addPlayerOpen ? (
           <div
             role="dialog"
+            className="motion-fade-in"
             aria-modal
             aria-label="Add player manually"
             style={{
@@ -988,7 +1105,7 @@ export function HostDashboardClient({
             onClick={closeAddPlayerModal}
           >
             <div
-              className="card"
+              className="card motion-sheet-panel"
               style={{ width: "min(540px, 100%)", padding: 18 }}
               onClick={(e) => e.stopPropagation()}
             >
@@ -1043,6 +1160,7 @@ export function HostDashboardClient({
         {removePlayerTarget ? (
           <div
             role="dialog"
+            className="motion-fade-in"
             aria-modal
             aria-label="Remove player"
             style={{
@@ -1056,7 +1174,7 @@ export function HostDashboardClient({
             }}
             onClick={closeRemovePlayerModal}
           >
-            <div className="card" style={{ width: "min(480px, 100%)", padding: 18 }} onClick={(e) => e.stopPropagation()}>
+            <div className="card motion-sheet-panel" style={{ width: "min(480px, 100%)", padding: 18 }} onClick={(e) => e.stopPropagation()}>
               <div className="label" style={{ marginBottom: 8 }}>
                 Host roster
               </div>
@@ -1086,6 +1204,7 @@ export function HostDashboardClient({
         {reportPlayerTarget ? (
           <div
             role="dialog"
+            className="motion-fade-in"
             aria-modal
             aria-label="Report player"
             style={{
@@ -1099,7 +1218,7 @@ export function HostDashboardClient({
             }}
             onClick={closeReportPlayerModal}
           >
-            <div className="card" style={{ width: "min(560px, 100%)", padding: 18 }} onClick={(e) => e.stopPropagation()}>
+            <div className="card motion-sheet-panel" style={{ width: "min(560px, 100%)", padding: 18 }} onClick={(e) => e.stopPropagation()}>
               <div className="label" style={{ marginBottom: 8 }}>
                 Host roster
               </div>
@@ -1153,6 +1272,7 @@ export function HostDashboardClient({
         {deletePlayerTarget ? (
           <div
             role="dialog"
+            className="motion-fade-in"
             aria-modal
             aria-label="Delete player"
             style={{
@@ -1166,7 +1286,7 @@ export function HostDashboardClient({
             }}
             onClick={closeDeletePlayerModal}
           >
-            <div className="card" style={{ width: "min(480px, 100%)", padding: 18 }} onClick={(e) => e.stopPropagation()}>
+            <div className="card motion-sheet-panel" style={{ width: "min(480px, 100%)", padding: 18 }} onClick={(e) => e.stopPropagation()}>
               <div className="label" style={{ marginBottom: 8 }}>
                 Host roster
               </div>
@@ -1198,24 +1318,6 @@ export function HostDashboardClient({
   );
 }
 
-function Stat({ label, value, sub, accent = false }: { label: string; value: string; sub?: string; accent?: boolean }) {
-  return (
-    <div style={{ borderTop: `3px solid ${accent ? "var(--accent)" : "var(--paper)"}`, paddingTop: 12 }}>
-      <div className="mono" style={{ fontSize: 10.5, letterSpacing: ".12em", color: "rgba(251,248,241,.55)", marginBottom: 6, fontWeight: 700 }}>
-        {label.toUpperCase()}
-      </div>
-      <div className="display" style={{ fontSize: "clamp(30px, 4.5vw, 44px)", lineHeight: 0.9, color: accent ? "var(--accent)" : "var(--paper)" }}>
-        {value}
-      </div>
-      {sub ? (
-        <div className="mono" style={{ fontSize: 10.5, color: "rgba(251,248,241,.55)", marginTop: 6, letterSpacing: ".06em" }}>
-          {sub}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
 function IcoCheck(props: { size?: number }) {
   const s = props.size ?? 16;
   return (
@@ -1242,6 +1344,51 @@ function IcoRefund(props: { size?: number }) {
       <path d="M12 8v5M12 16h.01" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" />
     </svg>
   );
+}
+
+function RosterFilterIcon({ filterId }: { filterId: PaymentFilter }) {
+  const s = 16;
+  switch (filterId) {
+    case "all":
+      return (
+        <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden>
+          <path d="M4 7h16M4 12h16M4 17h11" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      );
+    case "paid":
+      return (
+        <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden>
+          <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
+          <path d="M8 12l2.5 2.5L16 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+    case "pending":
+      return (
+        <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden>
+          <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
+          <path d="M12 7v5l3 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      );
+    case "refund":
+      return (
+        <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden>
+          <path
+            d="M9 14l-4-4 4-4M5 10h11a4 4 0 014 4 4 4 0 01-4 4h-2"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      );
+    case "canceled":
+      return (
+        <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden>
+          <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
+          <path d="M15 9l-6 6M9 9l6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      );
+  }
 }
 
 function HostPaymentStatusBadge({ status }: { status: SignupPaymentStatus }) {
@@ -1334,7 +1481,7 @@ function HostPaymentActionsDropdown({
         <span className="sr-only">Open payment status actions</span>
       </button>
       {open ? (
-        <div className="host-payment-actions-panel">
+        <div className="host-payment-actions-panel motion-pop-panel">
           <div style={{ display: "grid", gap: 6 }}>
             {options.map((next) => (
               <button

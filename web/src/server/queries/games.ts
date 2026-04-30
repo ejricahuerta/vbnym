@@ -49,7 +49,7 @@ export const getSignupsGroupedByGameId = cache(
     try {
       const supabase = createServerSupabase();
       const rosterStatuses = options?.includeAllPaymentStatuses
-        ? ["active", "waitlist", "canceled", "removed"]
+        ? ["active", "waitlist", "removed"]
         : ["active", "waitlist"];
       let query = supabase
         .from("signups")

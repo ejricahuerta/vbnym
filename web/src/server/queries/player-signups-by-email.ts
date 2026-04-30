@@ -39,7 +39,7 @@ function logQueryDiagnostic(diag: QueryDiagnostic): void {
 }
 
 /**
- * Live games at or after “now” where this email has an active or waitlist signup.
+ * Live games at or after “now” where this email has any signup lifecycle state.
  * Uses the service-role client (see {@link createServerSupabase}).
  */
 export const getPlayerSignupsWithUpcomingGamesByEmail = cache(
@@ -68,8 +68,7 @@ export const getPlayerSignupsWithUpcomingGamesByEmail = cache(
       const { data: signups, error: signupsError } = await supabase
         .from("signups")
         .select("*, organizations ( name )")
-        .eq("player_email", normalized)
-        .in("status", ["active", "waitlist"]);
+        .eq("player_email", normalized);
 
       if (signupsError) {
         logQueryDiagnostic({

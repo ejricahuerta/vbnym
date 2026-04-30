@@ -8,6 +8,7 @@ const STORAGE_KEY = "sixback_cookie_consent_v1";
 export function CookieConsentBanner() {
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
+  const [closing, setClosing] = useState(false);
 
   useEffect(() => {
     const id = requestAnimationFrame(() => {
@@ -28,7 +29,8 @@ export function CookieConsentBanner() {
     } catch {
       /* ignore */
     }
-    setVisible(false);
+    setClosing(true);
+    window.setTimeout(() => setVisible(false), 260);
   }
 
   if (!mounted || !visible) {
@@ -40,6 +42,7 @@ export function CookieConsentBanner() {
       role="dialog"
       aria-label="Cookie notice"
       aria-live="polite"
+      className={closing ? "motion-fade-out" : "motion-sheet-panel"}
       style={{
         position: "fixed",
         left: 0,
@@ -82,7 +85,7 @@ export function CookieConsentBanner() {
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
           <button
             type="button"
-            className="btn ghost sm"
+            className="btn ghost sm motion-press"
             aria-label="Close cookie notice"
             onClick={dismiss}
             style={{ minWidth: 36, paddingLeft: 10, paddingRight: 10 }}
@@ -91,7 +94,7 @@ export function CookieConsentBanner() {
               ×
             </span>
           </button>
-          <button type="button" className="btn accent sm" onClick={dismiss}>
+          <button type="button" className="btn accent sm motion-press" onClick={dismiss}>
             Accept
           </button>
         </div>

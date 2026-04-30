@@ -1,4 +1,6 @@
 :root {
+  /* SiteHeader inner row: 12 + 56 + 12 padding + 2 border — used with fixed mobile header */
+  --site-header-mobile-bar: 82px;
   --bg: #efeae0;
   --bg-2: #e5dfd2;
   --paper: #fbf8f1;
@@ -15,6 +17,16 @@
   --display: "Archivo Black", "Anton", sans-serif;
   --serif: "Fraunces", "Instrument Serif", Georgia, serif;
   --mono: "JetBrains Mono", ui-monospace, monospace;
+  /* Motion tokens */
+  --motion-fast: 140ms;
+  --motion-base: 220ms;
+  --motion-slow: 340ms;
+  --ease-emphatic: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.45, 0, 0.55, 1);
+  --motion-lift: -2px;
+  --motion-press: 0.98;
+  --motion-slide: 22px;
 }
 
 *,
@@ -23,10 +35,10 @@
   box-sizing: border-box;
 }
 
-html {
-  overflow-x: hidden;
-}
-
+/*
+ * Do not set overflow-x: hidden on html/body — it breaks position:sticky for descendants
+ * (header) in Chrome / Safari. Page sections use their own overflow-x where needed.
+ */
 html,
 body {
   margin: 0;
@@ -38,7 +50,7 @@ body {
 }
 
 body {
-  overflow-x: hidden;
+  max-width: 100%;
 }
 
 a {
@@ -151,7 +163,11 @@ a {
   text-transform: uppercase;
   cursor: pointer;
   box-shadow: 3px 3px 0 var(--ink);
-  transition: transform .12s ease, box-shadow .12s ease, background .15s ease;
+  transition:
+    transform var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out),
+    background var(--motion-base) var(--ease-in-out),
+    opacity var(--motion-fast) var(--ease-in-out);
 }
 
 .btn.lg {
@@ -204,7 +220,83 @@ a {
 }
 
 .btn:hover {
-  transform: translate(-1px, -1px);
+  transform: translate(var(--motion-lift), var(--motion-lift));
+}
+
+.btn:active {
+  transform: scale(var(--motion-press));
+}
+
+.motion-press {
+  transition:
+    transform var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out),
+    opacity var(--motion-fast) var(--ease-in-out);
+}
+
+.motion-press:hover {
+  transform: translate(var(--motion-lift), var(--motion-lift));
+}
+
+.motion-press:active {
+  transform: scale(var(--motion-press));
+}
+
+.motion-pop-panel {
+  transform-origin: top right;
+  animation: motion-pop-in var(--motion-base) var(--ease-emphatic) both;
+}
+
+.motion-sheet-panel {
+  animation: motion-sheet-in var(--motion-slow) var(--ease-emphatic) both;
+}
+
+.motion-fade-in {
+  animation: motion-fade-in var(--motion-base) var(--ease-out) both;
+}
+
+.motion-fade-out {
+  animation: motion-fade-out var(--motion-base) var(--ease-in-out) both;
+}
+
+@keyframes motion-pop-in {
+  from {
+    transform: translateY(8px) scale(0.96);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes motion-sheet-in {
+  from {
+    transform: translateY(var(--motion-slide));
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes motion-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes motion-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
 }
 
 .card {
@@ -245,7 +337,9 @@ a {
 }
 
 .liftable {
-  transition: transform .15s ease, box-shadow .15s ease;
+  transition:
+    transform var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out);
 }
 
 .liftable:hover {
@@ -369,6 +463,36 @@ a {
 }
 
 /* Header: three groups → logo | nav | actions (matches prototype). Hamburger ≤880px. */
+.site-header {
+  position: -webkit-sticky;
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 50;
+  border-bottom: 2px solid var(--ink);
+  background: var(--bg);
+}
+
+@media (max-width: 880px) {
+  /*
+   * Fixed bar on narrow viewports — sticky fails when any ancestor uses overflow-x or on iOS.
+   * Offset matches header height so content is not hidden under the bar.
+   */
+  body {
+    padding-top: calc(env(safe-area-inset-top, 0px) + var(--site-header-mobile-bar));
+  }
+
+  .site-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    z-index: 100;
+    padding-top: env(safe-area-inset-top, 0px);
+    box-shadow: 0 1px 0 rgba(17, 17, 20, 0.06);
+  }
+}
+
 .site-header-inner {
   min-height: 56px;
 }
@@ -395,6 +519,11 @@ a {
 .site-header-menu-btn {
   display: none;
   flex-shrink: 0;
+}
+
+.site-header-popover {
+  transform-origin: top right;
+  will-change: transform, opacity;
 }
 
 @media (max-width: 880px) {
@@ -604,7 +733,6 @@ select.input.xl.browse-roster-game-select {
 .roster-lower-grid,
 .site-footer-columns,
 .host-roster-content-grid,
-.host-kpi-grid,
 .host-type-cards {
   grid-template-columns: 1fr !important;
 }
@@ -613,7 +741,7 @@ select.input.xl.browse-roster-game-select {
   display: none !important;
 }
 
-.roster-row,
+.host-dashboard-roster-row,
 .browse-list-row {
   grid-template-columns: 1fr !important;
   gap: 8px !important;
@@ -650,13 +778,93 @@ select.input.xl.browse-roster-game-select {
   gap: 12px;
 }
 
+/* Game detail hero */
+.detail-hero-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+}
+
+.detail-hero-signup {
+  min-width: 0;
+}
+
+/* Game detail: mobile signup modal */
+.signup-modal-root {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 14px;
+  pointer-events: none;
+}
+
+.signup-modal-root[data-enter="true"] {
+  pointer-events: auto;
+}
+
+.signup-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(17, 17, 20, 0.55);
+  opacity: 0;
+  transition: opacity var(--motion-base) var(--ease-in-out);
+}
+
+.signup-modal-root[data-enter="true"] .signup-modal-backdrop {
+  opacity: 1;
+}
+
+.signup-modal-panel {
+  position: relative;
+  z-index: 1;
+  width: min(520px, 100%);
+  max-height: min(90dvh, 880px);
+  overflow-y: auto;
+  border-radius: 0;
+  transform: translateY(var(--motion-slide));
+  opacity: 0;
+  transition:
+    transform var(--motion-slow) var(--ease-emphatic),
+    opacity var(--motion-base) var(--ease-out);
+}
+
+.signup-modal-root[data-enter="true"] .signup-modal-panel {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+/* Signup form: group accordion height */
+.signup-group-accordion {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--motion-slow) var(--ease-emphatic);
+}
+
+.signup-group-accordion[data-open="true"] {
+  grid-template-rows: 1fr;
+}
+
+.signup-group-accordion-shell {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.signup-group-toggle-icon {
+  display: inline-block;
+  transition: transform var(--motion-base) var(--ease-emphatic);
+  transform-origin: center;
+}
+
+.signup-group-toggle-icon[data-open="true"] {
+  transform: rotate(45deg);
+}
+
 @media (min-width: 720px) {
   .browse-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .host-kpi-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 }
 
@@ -697,13 +905,43 @@ select.input.xl.browse-roster-game-select {
     grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr) !important;
   }
 
+  /*
+   * Game detail: one outer grid row so a tall signup card cannot stretch a separate “title row” and
+   * leave empty space above host/roster (display:contents + lead/rest as two rows caused that).
+   * Keep column gutter; stack lead + rest inside column 1 only.
+   */
+  .detail-hero-grid {
+    row-gap: 0 !important;
+    column-gap: 32px !important;
+  }
+
+  .detail-hero-main {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+    align-self: start;
+  }
+
+  .detail-hero-signup {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: start;
+  }
+
   .roster-table-head {
     display: grid !important;
   }
 
-  .roster-row {
+  .host-dashboard-roster-row {
     grid-template-columns: 36px minmax(0, 2.25fr) minmax(84px, 0.9fr) minmax(140px, 1fr) !important;
     gap: 12px !important;
+  }
+
+  .host-roster-content-grid {
+    grid-template-columns: minmax(0, 4fr) minmax(260px, 2fr) !important;
   }
 
   .browse-list-row {
@@ -739,16 +977,8 @@ select.input.xl.browse-roster-game-select {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .host-roster-content-grid {
-    grid-template-columns: minmax(0, 4fr) minmax(280px, 2fr) !important;
-  }
-
   .host-type-cards {
     grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-  }
-
-  .host-kpi-grid {
-    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
   }
 }
 
@@ -770,7 +1000,7 @@ select.input.xl.browse-roster-game-select {
     display: none !important;
   }
 
-  .roster-row {
+  .host-dashboard-roster-row {
     grid-template-columns: 1fr !important;
     gap: 8px !important;
   }
@@ -790,6 +1020,18 @@ select.input.xl.browse-roster-game-select {
   .detail-hero-grid,
   .detail-body-grid {
     grid-template-columns: 1fr !important;
+  }
+
+  .detail-hero-lead,
+  .detail-hero-rest,
+  .detail-hero-signup {
+    grid-column: unset !important;
+    grid-row: unset !important;
+  }
+
+  /* Fixed bottom signup dock → keep last lines of copy scroll-clear above the bar */
+  .game-detail-hero--mobile-signup-dock .detail-hero-main {
+    padding-bottom: calc(152px + env(safe-area-inset-bottom, 0px));
   }
 
   .roster-lower-grid {
@@ -843,7 +1085,10 @@ select.input.xl.browse-roster-game-select {
   gap: 8px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  transition:
+    transform var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out),
+    background var(--motion-base) var(--ease-in-out);
 }
 
 .browse-filter-btn:hover {
@@ -922,21 +1167,77 @@ select.input.xl.browse-roster-game-select {
   }
 }
 
+.host-roster-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.host-roster-filters {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+  min-width: 0;
+}
+
+.host-roster-toolbar-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+@media (max-width: 920px) {
+  .host-roster-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .host-roster-toolbar-actions {
+    justify-content: flex-start;
+  }
+}
+
 .roster-filter-btn {
   appearance: none;
   cursor: pointer;
   font-family: var(--ui);
   font-weight: 700;
-  font-size: 12.5px;
-  padding: 8px 12px;
+  font-size: 11px;
+  padding: 8px 10px;
   border-radius: 6px;
   border: 2px solid var(--ink);
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  transition: transform 0.1s ease, background 0.12s ease;
+  flex-shrink: 1;
+  min-width: 0;
+  transition:
+    transform var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out),
+    background var(--motion-base) var(--ease-in-out);
+}
+
+.roster-filter-btn-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.roster-filter-btn-count {
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  opacity: 0.75;
+}
+
+.roster-filter-btn-label {
+  white-space: nowrap;
 }
 
 .host-step-pill {
@@ -953,7 +1254,18 @@ select.input.xl.browse-roster-game-select {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  transition:
+    transform var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out),
+    background var(--motion-base) var(--ease-in-out);
+}
+
+.host-create-type-btn:hover:not(:disabled) {
+  transform: translate(var(--motion-lift), var(--motion-lift));
+}
+
+.host-create-type-btn:active:not(:disabled) {
+  transform: scale(var(--motion-press));
 }
 
 .host-type-cards {
@@ -1116,6 +1428,27 @@ select.input.xl.browse-roster-game-select {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .btn,
+  .liftable,
+  .input,
+  .browse-filter-btn,
+  .roster-filter-btn,
+  .host-step-pill,
+  .motion-press,
+  .signup-modal-backdrop,
+  .signup-modal-panel,
+  .signup-group-accordion,
+  .signup-group-toggle-icon {
+    transition-duration: 0.01ms !important;
+  }
+
+  .motion-pop-panel,
+  .motion-sheet-panel,
+  .motion-fade-in,
+  .motion-fade-out {
+    animation: none !important;
+  }
+
   .landing-hero-copy,
   .landing-hero-ticket,
   .landing-hero-cta .btn,
@@ -1315,4 +1648,269 @@ details.host-roster-more > summary::-webkit-details-marker {
   border-radius: 8px;
   background: var(--paper);
   box-shadow: 4px 4px 0 var(--ink);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Host dashboard — mobile-friendly layout (hero, roster, payment menu)         */
+/* -------------------------------------------------------------------------- */
+
+.host-dashboard-hero {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+.host-dashboard-hero-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 40px 18px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.host-dashboard-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  width: 100%;
+}
+
+.host-dashboard-hero-actions .host-dashboard-game-select.input.xl.browse-roster-game-select {
+  flex: 1 1 200px;
+  min-width: 0;
+  width: auto;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.host-dashboard-hero-actions .host-dashboard-hero-cta.btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+select.host-dashboard-game-select.input.xl.browse-roster-game-select {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 719px) {
+  .host-dashboard-hero-inner {
+    padding: 24px 16px 20px;
+    gap: 10px;
+  }
+
+  .host-dashboard-hero-title.display {
+    font-size: clamp(32px, 9vw, 52px) !important;
+  }
+
+  .host-dashboard-hero-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .host-dashboard-hero-actions .host-dashboard-game-select.input.xl.browse-roster-game-select {
+    flex: none;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .host-dashboard-hero-actions .host-dashboard-hero-cta.btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .host-dashboard-main:not(.host-dashboard-empty) {
+    padding: 20px max(16px, env(safe-area-inset-left)) 28px max(16px, env(safe-area-inset-right)) !important;
+  }
+
+  .host-dashboard-main.host-dashboard-empty {
+    padding: 40px max(16px, env(safe-area-inset-left)) 48px max(16px, env(safe-area-inset-right)) !important;
+  }
+}
+
+.host-dashboard-main {
+  width: 100%;
+  max-width: 1280px;
+  margin-left: auto;
+  margin-right: auto;
+  min-width: 0;
+  padding: 28px 18px 34px;
+  box-sizing: border-box;
+}
+
+.host-dashboard-main.host-dashboard-empty {
+  padding: 48px 18px 60px;
+}
+
+@media (max-width: 920px) {
+  .host-dashboard-main:not(.host-dashboard-empty) {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+}
+
+/* Overflow must not live on the same wrapper as SiteHeader → breaks position:sticky. */
+.host-dashboard-page {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.host-dashboard-page-scroll {
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.host-roster-content-grid {
+  display: grid;
+  gap: 16px;
+  align-items: start;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.host-roster-content-grid > div {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.host-dashboard-archived-row,
+.host-dashboard-intake-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.host-dashboard-archived-row > span:first-child,
+.host-dashboard-intake-row > span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.host-dashboard-payout-card .input {
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (max-width: 920px) {
+  .host-dashboard-archived-row {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: stretch;
+  }
+
+  .host-dashboard-archived-row .host-payment-actions-dropdown {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    justify-self: stretch;
+  }
+
+  .host-dashboard-archived-row .host-payment-actions-dropdown > button[type="button"] {
+    width: 100%;
+    justify-content: space-between;
+    box-sizing: border-box;
+    min-height: 44px;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .host-dashboard-archived-row .host-payment-actions-panel {
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    transform: none !important;
+    box-sizing: border-box;
+  }
+}
+
+@media (max-width: 520px) {
+  .host-dashboard-intake-row {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    gap: 6px;
+  }
+
+  .host-dashboard-intake-row > span:last-child {
+    justify-self: start;
+  }
+}
+
+.host-dashboard-payout-card {
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+@media (max-width: 920px) {
+  .host-roster-toolbar {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .host-dashboard-main .card {
+    max-width: 100%;
+    min-width: 0;
+  }
+}
+
+/* Host roster: card list is default; table from 921px (matches narrow layout elsewhere). */
+.host-roster-desktop-only {
+  display: none;
+}
+
+.host-roster-mobile-only {
+  display: grid;
+  gap: 12px;
+}
+
+.host-roster-mobile-card {
+  padding: 14px 16px !important;
+  overflow: visible;
+}
+
+.host-roster-mobile-only .host-payment-actions-dropdown {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+}
+
+.host-roster-mobile-only .host-payment-actions-dropdown > button[type="button"] {
+  width: 100%;
+  justify-content: space-between;
+  box-sizing: border-box;
+  min-height: 44px;
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+.host-roster-mobile-only .host-payment-actions-panel {
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  max-width: none !important;
+  transform: none !important;
+  box-sizing: border-box;
+}
+
+@media (min-width: 921px) {
+  .host-roster-desktop-only {
+    display: block !important;
+  }
+
+  .host-roster-mobile-only {
+    display: none !important;
+  }
 }
