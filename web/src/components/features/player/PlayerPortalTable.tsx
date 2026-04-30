@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactElement } from "react";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -16,12 +17,14 @@ function formatMoney(cents: number): string {
 
 function formatStart(iso: string): string {
   try {
-    return new Date(iso).toLocaleString(undefined, {
+    return new Date(iso).toLocaleString("en-CA", {
       weekday: "short",
       month: "short",
       day: "numeric",
       hour: "numeric",
       minute: "2-digit",
+      hour12: true,
+      timeZone: "America/Toronto",
     });
   } catch {
     return iso;
@@ -48,7 +51,7 @@ function matchesFilter(row: PlayerSignupWithGame, filter: PaymentFilter): boolea
   return row.signup.payment_status === "canceled";
 }
 
-export function PlayerPortalTable({ rows }: { rows: PlayerSignupWithGame[] }): JSX.Element {
+export function PlayerPortalTable({ rows }: { rows: PlayerSignupWithGame[] }): ReactElement {
   const router = useRouter();
   const [filter, setFilter] = useState<PaymentFilter>("all");
 

@@ -62,7 +62,7 @@ export async function setSignupPaymentStatusForHost(formData: FormData): Promise
 
   const { data: signup } = await supabase
     .from("signups")
-    .select("id, player_name, player_email, payment_status, status, payment_code, organizations ( name )")
+    .select("id, player_name, player_email, payment_status, status, payment_code, added_by_name, refund_owner_name, organizations ( name )")
     .eq("id", parsed.data.signupId)
     .eq("game_id", parsed.data.gameId)
     .maybeSingle<{
@@ -72,6 +72,8 @@ export async function setSignupPaymentStatusForHost(formData: FormData): Promise
       payment_status: "paid" | "pending" | "refund" | "canceled";
       status: "active" | "waitlist" | "removed" | "deleted";
       payment_code: string;
+      added_by_name: string;
+      refund_owner_name: string;
       organizations: { name: string } | { name: string }[] | null;
     }>();
 
@@ -221,6 +223,9 @@ export async function setSignupPaymentStatusForHost(formData: FormData): Promise
       playerName: signup.player_name,
       paymentCode: signup.payment_code,
       amountCents: game.price_cents,
+      playerCount: 1,
+      addedByName: signup.added_by_name,
+      refundOwnerName: signup.refund_owner_name,
       deadlineMinutes: PAYMENT_CODE_EXPIRY_MINUTES,
       manualOnly,
     });

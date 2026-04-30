@@ -43,7 +43,7 @@ type PlayerSignupGameJoinRow = Pick<
   PlayerPortalSignup,
   "id" | "game_id" | "player_name" | "payment_code" | "payment_status" | "status"
 > & {
-  games: PlayerPortalGame | null;
+  games: PlayerPortalGame | PlayerPortalGame[] | null;
 };
 
 /**
@@ -92,7 +92,7 @@ export async function getPlayerSignupsWithUpcomingGamesByEmail(email: string): P
       return { rows: [], queryError: error.message };
     }
 
-    const rows = ((data ?? []) as PlayerSignupGameJoinRow[])
+    const rows = ((data ?? []) as unknown as PlayerSignupGameJoinRow[])
       .filter((row) => row.games)
       .map((row) => ({
         signup: {
@@ -103,7 +103,7 @@ export async function getPlayerSignupsWithUpcomingGamesByEmail(email: string): P
           payment_status: row.payment_status,
           status: row.status,
         },
-        game: row.games,
+        game: (Array.isArray(row.games) ? row.games[0] : row.games) as PlayerPortalGame,
       }));
 
     return { rows, queryError: null };

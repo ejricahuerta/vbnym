@@ -56,6 +56,8 @@ const LANDING_HOST_SAMPLE_HEADER: Pick<GameRow, "title" | "signed_count" | "capa
   capacity: 12,
 };
 
+type LandingHostSampleSignup = Pick<SignupRow, "id" | "game_id" | "player_name" | "payment_code" | "payment_status">;
+
 /** Shown in the hero when there are no live games yet (illustrative ticket). */
 const LANDING_DUMMY_HERO_TICKET: Pick<
   GameRow,
@@ -90,78 +92,48 @@ function gameKindTicketLabel(kind: GameRow["kind"]): string {
   return "DROP-IN";
 }
 
-const LANDING_HOST_SAMPLE_ROSTER: SignupRow[] = [
+const LANDING_HOST_SAMPLE_ROSTER: LandingHostSampleSignup[] = [
   {
     id: "landing-host-sample-1",
     game_id: "landing-host-sample",
     player_name: "Alex Chen",
-    player_email: "alex.chen@example.com",
     payment_code: "6IX-K7M2",
     payment_status: "paid",
-    organization_id: DEFAULT_ORGANIZATION_ID,
-    organizations: { name: DEFAULT_ORGANIZATION_NAME },
-    status: "active",
-    created_at: "2026-04-21T14:22:00.000Z",
   },
   {
     id: "landing-host-sample-2",
     game_id: "landing-host-sample",
     player_name: "Jordan Singh",
-    player_email: "jordan.singh@example.com",
     payment_code: "6IX-P9R4",
     payment_status: "paid",
-    organization_id: DEFAULT_ORGANIZATION_ID,
-    organizations: { name: DEFAULT_ORGANIZATION_NAME },
-    status: "active",
-    created_at: "2026-04-21T15:01:00.000Z",
   },
   {
     id: "landing-host-sample-3",
     game_id: "landing-host-sample",
     player_name: "Sam Okonkwo",
-    player_email: "sam.okonkwo@example.com",
     payment_code: "6IX-T3N8",
     payment_status: "pending",
-    organization_id: DEFAULT_ORGANIZATION_ID,
-    organizations: { name: DEFAULT_ORGANIZATION_NAME },
-    status: "active",
-    created_at: "2026-04-22T09:45:00.000Z",
   },
   {
     id: "landing-host-sample-4",
     game_id: "landing-host-sample",
     player_name: "Priya N.",
-    player_email: "priya.n@example.com",
     payment_code: "6IX-W5L1",
     payment_status: "paid",
-    organization_id: DEFAULT_ORGANIZATION_ID,
-    organizations: { name: DEFAULT_ORGANIZATION_NAME },
-    status: "active",
-    created_at: "2026-04-22T11:12:00.000Z",
   },
   {
     id: "landing-host-sample-5",
     game_id: "landing-host-sample",
     player_name: "Marcus Lee",
-    player_email: "marcus.lee@example.com",
     payment_code: "6IX-Z8Q6",
     payment_status: "pending",
-    organization_id: DEFAULT_ORGANIZATION_ID,
-    organizations: { name: DEFAULT_ORGANIZATION_NAME },
-    status: "active",
-    created_at: "2026-04-23T18:30:00.000Z",
   },
   {
     id: "landing-host-sample-6",
     game_id: "landing-host-sample",
     player_name: "Taylor Brooks",
-    player_email: "taylor.brooks@example.com",
     payment_code: "6IX-B2Y0",
     payment_status: "pending",
-    organization_id: DEFAULT_ORGANIZATION_ID,
-    organizations: { name: DEFAULT_ORGANIZATION_NAME },
-    status: "active",
-    created_at: "2026-04-24T08:05:00.000Z",
   },
 ];
 

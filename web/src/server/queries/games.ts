@@ -55,7 +55,7 @@ export const listLiveGames = cache(async (): Promise<GameRow[]> => {
       .select(GAME_LIST_SELECT)
       .eq("status", "live")
       .order("starts_at", { ascending: true });
-    return (data ?? []) as GameRow[];
+    return (data ?? []) as unknown as GameRow[];
   } catch {
     return [];
   }
@@ -73,7 +73,7 @@ export async function listLiveGamesForHost(hostEmail: string): Promise<GameRow[]
       .eq("status", "live")
       .ilike("owner_email", normalized)
       .order("starts_at", { ascending: true });
-    return (data ?? []) as GameRow[];
+    return (data ?? []) as unknown as GameRow[];
   } catch {
     return [];
   }
@@ -98,7 +98,7 @@ export async function getSignupsGroupedByGameId(
       query = query.in("payment_status", ["pending", "paid"]);
     }
     const { data } = await query;
-    const rows = (data ?? []) as SignupRow[];
+    const rows = (data ?? []) as unknown as SignupRow[];
     const record: Record<string, SignupRow[]> = {};
     for (const row of rows) {
       const list = record[row.game_id] ?? [];
@@ -128,7 +128,7 @@ export const getGameWithRoster = cache(
         .in("status", ["active", "waitlist"])
         .in("payment_status", ["pending", "paid"])
         .order("created_at", { ascending: true });
-      return { game: game as GameRow, roster: (roster ?? []) as SignupRow[] };
+      return { game: game as unknown as GameRow, roster: (roster ?? []) as unknown as SignupRow[] };
     } catch {
       return null;
     }

@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactElement } from "react";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
@@ -21,7 +22,7 @@ export function PlayerCancelAction({
   paymentStatus,
   className = "btn ghost sm",
   fullWidth = false,
-}: PlayerCancelActionProps): JSX.Element {
+}: PlayerCancelActionProps): ReactElement {
   const router = useRouter();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [cancelled, setCancelled] = useState(false);
