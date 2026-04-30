@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactElement } from "react";
 import { useCallback, useEffect, useState } from "react";
 
 import { SignupForm } from "@/components/features/detail/SignupForm";
@@ -21,7 +22,7 @@ export type GameDetailSignupSectionProps = {
   kind: GameKind;
 };
 
-export function GameDetailSignupSection(props: GameDetailSignupSectionProps): JSX.Element {
+export function GameDetailSignupSection(props: GameDetailSignupSectionProps): ReactElement {
   const { gameId, priceCents, signedCount, capacity, hostName, hostEmail, gameTitle, startsAtDisplay, kind } = props;
   const [ready, setReady] = useState(false);
   const wide = useMediaQuery(DETAIL_WIDE);
