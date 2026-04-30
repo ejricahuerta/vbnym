@@ -23,14 +23,6 @@ function getReminderLeadDays(): number {
   return parsed;
 }
 
-function isExpiringWithinLeadDays(iso: string | null, leadDays: number): boolean {
-  if (!iso) return false;
-  const expiresMs = Date.parse(iso);
-  if (!Number.isFinite(expiresMs)) return false;
-  const threshold = Date.now() + leadDays * 24 * 60 * 60 * 1000;
-  return expiresMs <= threshold;
-}
-
 function hostEmailFromConnectionId(id: string): string {
   return id.replace(/^host:/, "").trim().toLowerCase();
 }
@@ -38,15 +30,27 @@ function hostEmailFromConnectionId(id: string): string {
 export async function sendGmailReauthReminder(): Promise<GmailReauthReminderResult> {
   const supabase = createServerSupabase();
   const leadDays = getReminderLeadDays();
+  const thresholdIso = new Date(Date.now() + leadDays * 24 * 60 * 60 * 1000).toISOString();
+  const pageSize = 500;
+  let from = 0;
+  let due: GmailConnectionExpiryRow[] = [];
 
-  const { data } = await supabase
-    .from("gmail_connections")
-    .select("id, expires_at")
-    .like("id", "host:%")
-    .eq("active", true);
+  for (;;) {
+    const { data } = await supabase
+      .from("gmail_connections")
+      .select("id, expires_at")
+      .like("id", "host:%")
+      .eq("active", true)
+      .not("expires_at", "is", null)
+      .lte("expires_at", thresholdIso)
+      .order("expires_at", { ascending: true })
+      .range(from, from + pageSize - 1);
+    const rows = (data ?? []) as GmailConnectionExpiryRow[];
+    due = due.concat(rows);
+    if (rows.length < pageSize) break;
+    from += pageSize;
+  }
 
-  const rows = (data ?? []) as GmailConnectionExpiryRow[];
-  const due = rows.filter((row) => isExpiringWithinLeadDays(row.expires_at, leadDays));
   if (due.length === 0) return { ok: true, sent: 0, skipped: "no_host_reminders_due" };
 
   const reconnectUrl = `${appOrigin()}/api/gmail/host/oauth/start`;

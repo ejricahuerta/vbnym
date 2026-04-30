@@ -46,6 +46,35 @@ type GameRow = {
   signed_count: number;
 };
 
+function chunkArray<T>(items: T[], chunkSize: number): T[][] {
+  if (chunkSize <= 0) return [items];
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += chunkSize) {
+    chunks.push(items.slice(i, i + chunkSize));
+  }
+  return chunks;
+}
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  mapper: (item: T) => Promise<R>
+): Promise<R[]> {
+  const limit = Math.max(1, concurrency);
+  const results: R[] = new Array(items.length);
+  let index = 0;
+  async function worker(): Promise<void> {
+    for (;;) {
+      const current = index;
+      index += 1;
+      if (current >= items.length) return;
+      results[current] = await mapper(items[current]);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => worker()));
+  return results;
+}
+
 export function createGoogleOAuthClient(redirectUri?: string) {
   return new google.auth.OAuth2(
     requiredEnv("GOOGLE_OAUTH_CLIENT_ID"),
@@ -65,8 +94,10 @@ export async function fetchRecentPaymentCodes(accessToken: string): Promise<stri
   });
   const ids = list.data.messages?.map((message: { id?: string | null }) => message.id).filter(Boolean) as string[];
   const found = new Set<string>();
-  for (const id of ids) {
-    const msg = await gmail.users.messages.get({ userId: "me", id, format: "full" });
+  const messages = await mapWithConcurrency(ids, 6, async (id) =>
+    gmail.users.messages.get({ userId: "me", id, format: "full" })
+  );
+  for (const msg of messages) {
     const parts = msg.data.payload?.parts ?? [];
     const textChunks = [
       msg.data.snippet ?? "",
@@ -122,13 +153,17 @@ async function findRecentPaymentHits(refreshToken: string): Promise<GmailMessage
 
   const ids = list.data.messages?.map((message: { id?: string | null }) => message.id).filter(Boolean) as string[];
   const hits: GmailMessageHit[] = [];
-  for (const id of ids) {
-    const msg = await gmail.users.messages.get({
+  const messages = await mapWithConcurrency(ids, 6, async (id) =>
+    gmail.users.messages.get({
       userId: "me",
       id,
       format: "metadata",
       metadataHeaders: ["From", "Subject"],
-    });
+    })
+  );
+  for (const msg of messages) {
+    const messageId = msg.data.id ?? "";
+    if (!messageId) continue;
     const headers = msg.data.payload?.headers ?? [];
     const fromHeader =
       headers.find((h: { name?: string | null; value?: string | null }) => h.name?.toLowerCase() === "from")
@@ -140,7 +175,7 @@ async function findRecentPaymentHits(refreshToken: string): Promise<GmailMessage
     const senderEmail = parseSenderEmail(fromHeader);
     const codes = extractCodes(`${subject}\n${snippet}`);
     for (const code of codes) {
-      hits.push({ code, messageId: id, senderEmail });
+      hits.push({ code, messageId, senderEmail });
     }
   }
   return hits;
@@ -148,6 +183,7 @@ async function findRecentPaymentHits(refreshToken: string): Promise<GmailMessage
 
 export async function syncPaidSignupsFromGmail(): Promise<{ matched: number; expired: number; reminded: number }> {
   const supabase = createServerSupabase();
+  const inQueryChunkSize = 400;
 
   const { data: liveGamesData } = await supabase
     .from("games")
@@ -191,21 +227,35 @@ export async function syncPaidSignupsFromGmail(): Promise<{ matched: number; exp
   }
   if (automatedGameIds.length === 0) return { matched: 0, expired: 0, reminded: 0 };
 
-  const [{ data: pendingRows }, { data: gamesData }] = await Promise.all([
-    supabase
-      .from("signups")
-      .select("id, game_id, payment_code, player_email, player_name, created_at, payment_status")
-      .in("game_id", automatedGameIds)
-      .neq("payment_status", "paid")
-      .eq("status", "active"),
-    supabase
-      .from("games")
-      .select("id, title, starts_at, host_name, host_email, price_cents, signed_count")
-      .in("id", automatedGameIds),
-  ]);
-  const pending = ((pendingRows ?? []) as SignupRow[]).filter((row) => Boolean(row.payment_code));
+  const pendingChunks = await Promise.all(
+    chunkArray(automatedGameIds, inQueryChunkSize).map(async (gameIdsChunk) => {
+      const { data } = await supabase
+        .from("signups")
+        .select("id, game_id, payment_code, player_email, player_name, created_at, payment_status")
+        .in("game_id", gameIdsChunk)
+        .neq("payment_status", "paid")
+        .eq("status", "active");
+      return (data ?? []) as SignupRow[];
+    })
+  );
+  const gameChunks = await Promise.all(
+    chunkArray(automatedGameIds, inQueryChunkSize).map(async (gameIdsChunk) => {
+      const { data } = await supabase
+        .from("games")
+        .select("id, title, starts_at, host_name, host_email, price_cents, signed_count")
+        .in("id", gameIdsChunk);
+      return (data ?? []) as GameRow[];
+    })
+  );
+  const pending = pendingChunks.flat().filter((row) => Boolean(row.payment_code));
   if (pending.length === 0) return { matched: 0, expired: 0, reminded: 0 };
-  const gameById = new Map(((gamesData ?? []) as GameRow[]).map((game) => [game.id, game]));
+  const gameById = new Map(gameChunks.flat().map((game) => [game.id, game]));
+  const pendingByGameId = new Map<string, SignupRow[]>();
+  for (const row of pending) {
+    const rows = pendingByGameId.get(row.game_id) ?? [];
+    rows.push(row);
+    pendingByGameId.set(row.game_id, rows);
+  }
 
   let matched = 0;
   const matchedSignupIds = new Set<string>();
@@ -213,8 +263,7 @@ export async function syncPaidSignupsFromGmail(): Promise<{ matched: number; exp
   for (const [host, gameIds] of gameIdsByHost) {
     const refreshToken = tokenByHost.get(host);
     if (!refreshToken) continue;
-    const gameIdSet = new Set(gameIds);
-    const hostSignups = pending.filter((row) => gameIdSet.has(row.game_id));
+    const hostSignups = gameIds.flatMap((gameId) => pendingByGameId.get(gameId) ?? []);
     if (hostSignups.length === 0) continue;
 
     const hitByCode = new Map<string, GmailMessageHit>();
@@ -228,6 +277,14 @@ export async function syncPaidSignupsFromGmail(): Promise<{ matched: number; exp
       continue;
     }
 
+    const paymentEvents: Array<{
+      game_id: string;
+      signup_id: string;
+      payment_code: string;
+      source: string;
+      matched: boolean;
+      raw_payload: { messageId: string; senderEmail: string };
+    }> = [];
     for (const row of hostSignups) {
       const code = row.payment_code.toUpperCase();
       const hit = hitByCode.get(code);
@@ -283,7 +340,7 @@ export async function syncPaidSignupsFromGmail(): Promise<{ matched: number; exp
           });
         }
       }
-      await supabase.from("payment_events").insert({
+      paymentEvents.push({
         game_id: row.game_id,
         signup_id: row.id,
         payment_code: code,
@@ -291,6 +348,11 @@ export async function syncPaidSignupsFromGmail(): Promise<{ matched: number; exp
         matched: !error,
         raw_payload: { messageId: hit.messageId, senderEmail: hit.senderEmail },
       });
+    }
+    for (const batch of chunkArray(paymentEvents, 250)) {
+      if (batch.length > 0) {
+        await supabase.from("payment_events").insert(batch);
+      }
     }
   }
 
@@ -306,14 +368,29 @@ export async function syncPaidSignupsFromGmail(): Promise<{ matched: number; exp
   let reminded = 0;
   if (reminderCandidates.length > 0) {
     const reminderIds = reminderCandidates.map((row) => row.id);
-    const { data: reminderEvents } = await supabase
-      .from("payment_events")
-      .select("signup_id")
-      .eq("source", "pending-reminder")
-      .in("signup_id", reminderIds);
-    const alreadyReminded = new Set(
-      (reminderEvents ?? []).map((row) => String((row as { signup_id: string | null }).signup_id ?? ""))
+    const reminderEventsChunks = await Promise.all(
+      chunkArray(reminderIds, inQueryChunkSize).map(async (idsChunk) => {
+        const { data } = await supabase
+          .from("payment_events")
+          .select("signup_id")
+          .eq("source", "pending-reminder")
+          .in("signup_id", idsChunk);
+        return data ?? [];
+      })
     );
+    const alreadyReminded = new Set(
+      reminderEventsChunks
+        .flat()
+        .map((row) => String((row as { signup_id: string | null }).signup_id ?? ""))
+    );
+    const reminderEventsToInsert: Array<{
+      game_id: string;
+      signup_id: string;
+      payment_code: string;
+      source: string;
+      matched: boolean;
+      raw_payload: { remainingMinutes: number };
+    }> = [];
     for (const row of reminderCandidates) {
       if (alreadyReminded.has(row.id)) continue;
       const game = gameById.get(row.game_id);
@@ -361,7 +438,7 @@ export async function syncPaidSignupsFromGmail(): Promise<{ matched: number; exp
           text: hostTemplate.text,
         }),
       ]);
-      await supabase.from("payment_events").insert({
+      reminderEventsToInsert.push({
         game_id: row.game_id,
         signup_id: row.id,
         payment_code: row.payment_code.toUpperCase(),
@@ -371,6 +448,11 @@ export async function syncPaidSignupsFromGmail(): Promise<{ matched: number; exp
       });
       reminded += 1;
     }
+    for (const batch of chunkArray(reminderEventsToInsert, 250)) {
+      if (batch.length > 0) {
+        await supabase.from("payment_events").insert(batch);
+      }
+    }
   }
 
   const expiryCandidates = unpaidRows.filter((row) => {
@@ -379,24 +461,33 @@ export async function syncPaidSignupsFromGmail(): Promise<{ matched: number; exp
   });
   let expired = 0;
   const cancellationsByGame = new Map<string, number>();
-  for (const row of expiryCandidates) {
-    const { error } = await supabase
+  for (const chunk of chunkArray(expiryCandidates, 250)) {
+    const expiryIds = chunk.map((row) => row.id);
+    const { data: updatedRows } = await supabase
       .from("signups")
       .update({ status: "removed" })
-      .eq("id", row.id)
+      .in("id", expiryIds)
       .eq("status", "active")
-      .neq("payment_status", "paid");
-    if (error) continue;
-    expired += 1;
-    cancellationsByGame.set(row.game_id, (cancellationsByGame.get(row.game_id) ?? 0) + 1);
-    await supabase.from("payment_events").insert({
-      game_id: row.game_id,
-      signup_id: row.id,
-      payment_code: row.payment_code.toUpperCase(),
-      source: "auto-cancel",
-      matched: false,
-      raw_payload: { reason: "pending_payment_window_elapsed" },
-    });
+      .neq("payment_status", "paid")
+      .select("id, game_id");
+    const updatedIdSet = new Set(((updatedRows ?? []) as Array<{ id: string; game_id: string }>).map((row) => row.id));
+    const events = [];
+    for (const row of chunk) {
+      if (!updatedIdSet.has(row.id)) continue;
+      expired += 1;
+      cancellationsByGame.set(row.game_id, (cancellationsByGame.get(row.game_id) ?? 0) + 1);
+      events.push({
+        game_id: row.game_id,
+        signup_id: row.id,
+        payment_code: row.payment_code.toUpperCase(),
+        source: "auto-cancel",
+        matched: false,
+        raw_payload: { reason: "pending_payment_window_elapsed" },
+      });
+    }
+    if (events.length > 0) {
+      await supabase.from("payment_events").insert(events);
+    }
   }
   for (const [gameId, cancellationCount] of cancellationsByGame) {
     const game = gameById.get(gameId);
