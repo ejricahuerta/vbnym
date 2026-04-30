@@ -17,6 +17,11 @@ type EmailTemplate = {
   text: string;
 };
 
+type GmailConnectForPaymentSyncTemplateInput = {
+  reconnectUrl: string;
+  reason: "disconnect" | "payment_email_update";
+};
+
 type PaymentSignupTemplateInput = {
   gameTitle: string;
   startsAtDisplay: string;
@@ -27,6 +32,9 @@ type PaymentSignupTemplateInput = {
   playerName: string;
   paymentCode: string;
   amountCents: number;
+  playerCount: number;
+  addedByName: string;
+  refundOwnerName: string;
   deadlineMinutes: number;
   manualOnly: boolean;
 };
@@ -40,6 +48,9 @@ type HostSignupNotificationTemplateInput = {
   playerEmail: string;
   paymentCode: string;
   amountCents: number;
+  playerCount: number;
+  addedByName: string;
+  refundOwnerName: string;
   manualOnly: boolean;
 };
 
@@ -244,6 +255,9 @@ export function buildPlayerSignupPaymentEmailTemplate(input: PaymentSignupTempla
             <strong>Start:</strong> ${escapeHtml(input.startsAtDisplay)}<br />
             <strong>Presenting organizer:</strong> ${escapeHtml(input.gameOrganizerName)}<br />
             <strong>Registering under:</strong> ${escapeHtml(input.playerOrganizationName)}<br />
+            <strong>Added by:</strong> ${escapeHtml(input.addedByName)}<br />
+            <strong>Players:</strong> ${input.playerCount}<br />
+            <strong>Refund owner:</strong> ${escapeHtml(input.refundOwnerName)}<br />
             <strong>Amount:</strong> ${escapeHtml(amount)}<br />
             <strong>Send to:</strong> ${escapeHtml(input.hostEmail)}<br />
             <strong>Reference:</strong> ${escapeHtml(input.paymentCode)}<br />
@@ -253,7 +267,7 @@ export function buildPlayerSignupPaymentEmailTemplate(input: PaymentSignupTempla
       `,
       footerText: "This inbox is not monitored. For support, contact your host directly.",
     }),
-    text: `Payment pending\n\nHi ${input.playerName}, your signup was recorded.\n\n${statusLine}\n\nComplete payment in 3 steps:\n1) Send ${amount} by Interac to ${input.hostEmail}\n2) Use reference code ${input.paymentCode}\n3) Wait for your payment confirmation email\n\nImportant: this reference code expires ${input.deadlineMinutes} minutes after signup.\n\nGame: ${input.gameTitle}\nStart: ${input.startsAtDisplay}\nPresenting organizer: ${input.gameOrganizerName}\nRegistering under: ${input.playerOrganizationName}\nAmount: ${amount}\nSend to: ${input.hostEmail}\nReference: ${input.paymentCode}\nDeadline: ${input.deadlineMinutes} minutes from signup\nHost: ${input.hostName}\n\nThis inbox is not monitored. Contact your host directly for support.\n`,
+    text: `Payment pending\n\nHi ${input.playerName}, your signup was recorded.\n\n${statusLine}\n\nComplete payment in 3 steps:\n1) Send ${amount} by Interac to ${input.hostEmail}\n2) Use reference code ${input.paymentCode}\n3) Wait for your payment confirmation email\n\nImportant: this reference code expires ${input.deadlineMinutes} minutes after signup.\n\nGame: ${input.gameTitle}\nStart: ${input.startsAtDisplay}\nPresenting organizer: ${input.gameOrganizerName}\nRegistering under: ${input.playerOrganizationName}\nAdded by: ${input.addedByName}\nPlayers: ${input.playerCount}\nRefund owner: ${input.refundOwnerName}\nAmount: ${amount}\nSend to: ${input.hostEmail}\nReference: ${input.paymentCode}\nDeadline: ${input.deadlineMinutes} minutes from signup\nHost: ${input.hostName}\n\nThis inbox is not monitored. Contact your host directly for support.\n`,
   };
 }
 
@@ -273,6 +287,9 @@ export function buildHostSignupNotificationEmailTemplate(input: HostSignupNotifi
             <strong>Player:</strong> ${escapeHtml(input.playerName)} (${escapeHtml(input.playerEmail)})<br />
             <strong>Game:</strong> ${escapeHtml(input.gameTitle)}<br />
             <strong>Start:</strong> ${escapeHtml(input.startsAtDisplay)}<br />
+            <strong>Players:</strong> ${input.playerCount}<br />
+            <strong>Added by:</strong> ${escapeHtml(input.addedByName)}<br />
+            <strong>Refund owner:</strong> ${escapeHtml(input.refundOwnerName)}<br />
             <strong>Amount:</strong> ${escapeHtml(amount)}<br />
             <strong>Reference:</strong> ${escapeHtml(input.paymentCode)}
           </td></tr>
@@ -280,7 +297,7 @@ export function buildHostSignupNotificationEmailTemplate(input: HostSignupNotifi
       `,
       footerText: "Use host dashboard filters to keep pending payments moving.",
     }),
-    text: `New player signup\n\n${input.playerName} (${input.playerEmail}) joined ${input.gameTitle}.\nStart: ${input.startsAtDisplay}\nPresenting organizer: ${input.gameOrganizerName}\nRegistering under: ${input.playerOrganizationName}\nAmount: ${amount}\nReference: ${input.paymentCode}\n`,
+    text: `New player signup\n\n${input.playerName} (${input.playerEmail}) joined ${input.gameTitle}.\nStart: ${input.startsAtDisplay}\nPresenting organizer: ${input.gameOrganizerName}\nRegistering under: ${input.playerOrganizationName}\nPlayers: ${input.playerCount}\nAdded by: ${input.addedByName}\nRefund owner: ${input.refundOwnerName}\nAmount: ${amount}\nReference: ${input.paymentCode}\n`,
   };
 }
 
@@ -392,5 +409,50 @@ export function buildGmailReconnectReminderEmailTemplate(input: { reconnectUrl: 
       footerText: "Reconnect to keep automated payment sync running.",
     }),
     text: `Reconnect Gmail for ${input.scopeLabel}\n\nMay expire by ${input.expiresAtText}.\nReconnect: ${input.reconnectUrl}\n`,
+  };
+}
+
+export function buildGmailConnectForPaymentSyncEmailTemplate(
+  input: GmailConnectForPaymentSyncTemplateInput
+): EmailTemplate {
+  const reasonText =
+    input.reason === "disconnect"
+      ? "You disconnected Gmail from your host account."
+      : "You updated your payment email for a hosted game.";
+  return {
+    subject: "Connect Gmail for payment sync",
+    html: renderLayout({
+      title: "Connect Gmail",
+      subtitle: "Keep payment sync active for your hosted games.",
+      contentHtml: `
+        <p style="margin:0 0 12px;font-size:13px;line-height:1.55;color:#42424a;">
+          ${escapeHtml(reasonText)}
+        </p>
+        <p style="margin:0 0 12px;font-size:13px;line-height:1.55;color:#42424a;">
+          Connect Gmail again so payment sync can continue matching transfers for your player signups.
+        </p>
+        <div style="padding:8px 0 2px;">${renderButton("Connect Gmail", input.reconnectUrl)}</div>
+      `,
+      footerText: "You can manage Gmail sync from your host dashboard.",
+    }),
+    text: `Connect Gmail for payment sync\n\n${reasonText}\nConnect Gmail again so payment sync can continue matching transfers.\nReconnect: ${input.reconnectUrl}\n`,
+  };
+}
+
+export function buildGmailConnectedEmailTemplate(input: { dashboardUrl: string }): EmailTemplate {
+  return {
+    subject: "Gmail connected for payment sync",
+    html: renderLayout({
+      title: "Gmail connected",
+      subtitle: "Payment sync is now active for your hosted games.",
+      contentHtml: `
+        <p style="margin:0 0 12px;font-size:13px;line-height:1.55;color:#42424a;">
+          Your Gmail is connected. Incoming Interac transfers will be matched to your player signups automatically.
+        </p>
+        <div style="padding:8px 0 2px;">${renderButton("Open host dashboard", input.dashboardUrl)}</div>
+      `,
+      footerText: "You can manage Gmail sync from your host dashboard.",
+    }),
+    text: `Gmail connected for payment sync\n\nPayment sync is now active for your hosted games. Incoming Interac transfers will be matched to your player signups automatically.\nOpen host dashboard: ${input.dashboardUrl}\n`,
   };
 }

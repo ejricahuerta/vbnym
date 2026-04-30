@@ -119,6 +119,7 @@ function UserMenuDesktop({
         aria-expanded={open}
         aria-label="Account menu"
         onClick={() => setOpen((o) => !o)}
+        className="motion-press"
         style={{
           appearance: "none",
           width: 36,
@@ -144,6 +145,7 @@ function UserMenuDesktop({
       {open ? (
         <div
           role="menu"
+          className="motion-pop-panel site-header-popover"
           style={{
             position: "absolute",
             right: 0,
@@ -218,7 +220,7 @@ function GuestSignInMenuDesktop({ pathname }: { pathname: string }) {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label="Sign in options"
-        className="btn sm ghost"
+        className="btn sm ghost motion-press"
         onClick={() => setOpen((o) => !o)}
         style={{
           display: "inline-flex",
@@ -234,6 +236,7 @@ function GuestSignInMenuDesktop({ pathname }: { pathname: string }) {
       {open ? (
         <div
           role="menu"
+          className="motion-pop-panel site-header-popover"
           style={{
             position: "absolute",
             right: 0,
@@ -313,7 +316,7 @@ function HostEmailMenuDesktop({ email }: { email: string }) {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label="Host account menu"
-        className="btn sm ghost"
+        className="btn sm ghost motion-press"
         onClick={() => setOpen((o) => !o)}
         style={{
           display: "inline-flex",
@@ -332,6 +335,7 @@ function HostEmailMenuDesktop({ email }: { email: string }) {
       {open ? (
         <div
           role="menu"
+          className="motion-pop-panel site-header-popover"
           style={{
             position: "absolute",
             right: 0,
@@ -375,7 +379,7 @@ export function SiteHeaderClient({
   }
 
   return (
-    <header style={{ borderBottom: "2px solid var(--ink)", background: "var(--bg)", position: "sticky", top: 0, zIndex: 50 }}>
+    <header className="site-header">
       <div
         className="site-header-inner"
         style={{
@@ -436,7 +440,7 @@ export function SiteHeaderClient({
 
         <button
           type="button"
-          className="site-header-menu-btn site-header-mobile-only"
+          className="site-header-menu-btn site-header-mobile-only motion-press"
           aria-expanded={menuOpen}
           aria-controls="site-header-mobile-panel"
           aria-label={menuOpen ? "Close menu" : "Open menu"}
@@ -463,7 +467,7 @@ export function SiteHeaderClient({
       {menuOpen ? (
         <div
           id="site-header-mobile-panel"
-          className="site-header-mobile-drawer"
+          className="site-header-mobile-drawer motion-sheet-panel"
           style={{
             borderTop: "2px solid var(--ink)",
             background: "var(--paper)",

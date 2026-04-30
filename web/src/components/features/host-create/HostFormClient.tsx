@@ -426,7 +426,7 @@ export function HostFormClient({
         ) : null}
 
         <div style={{ marginBottom: 16 }}>
-          <Link href="/host" className="btn sm ghost">
+          <Link href="/host" className="btn sm ghost motion-press">
             ← Back to dashboard
           </Link>
         </div>
@@ -438,7 +438,7 @@ export function HostFormClient({
               <button
                 key={label}
                 type="button"
-                className="host-step-pill"
+                className="host-step-pill motion-press"
                 style={{
                   background: active ? "var(--accent)" : "transparent",
                   color: "var(--ink)",
@@ -471,6 +471,7 @@ export function HostFormClient({
                   <button
                     key={o.id}
                     type="button"
+                    className="host-create-type-btn"
                     onClick={() => {
                       if (!comingSoon) setKind(o.id);
                     }}
@@ -489,7 +490,8 @@ export function HostFormClient({
                       overflow: "hidden",
                       boxShadow: active ? "5px 5px 0 var(--accent)" : "3px 3px 0 var(--ink)",
                       transform: active ? "translate(-2px,-2px)" : "none",
-                      transition: "transform .15s ease, box-shadow .15s ease, background .15s ease",
+                      transition:
+                        "transform var(--motion-fast) var(--ease-out), box-shadow var(--motion-fast) var(--ease-out), background var(--motion-base) var(--ease-in-out)",
                       display: "flex",
                       flexDirection: "column",
                       opacity: comingSoon ? 0.7 : 1,
@@ -590,7 +592,7 @@ export function HostFormClient({
               })}
             </div>
             <div style={{ marginTop: 24, display: "flex", gap: 10 }}>
-              <button type="button" className="btn" onClick={() => setStep(2)}>
+              <button type="button" className="btn motion-press" onClick={() => setStep(2)}>
                 Continue <IcoArrowRight size={16} />
               </button>
             </div>
@@ -728,10 +730,10 @@ export function HostFormClient({
             </div>
 
             <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-              <button type="button" className="btn ghost" onClick={() => setStep(1)}>
+              <button type="button" className="btn ghost motion-press" onClick={() => setStep(1)}>
                 <IcoArrowLeft size={14} /> Back
               </button>
-              <button type="button" className="btn" onClick={() => setStep(3)}>
+              <button type="button" className="btn motion-press" onClick={() => setStep(3)}>
                 Continue to payment <IcoArrowRight size={16} />
               </button>
             </div>
@@ -824,7 +826,7 @@ export function HostFormClient({
             <div className="host-payment-actions">
               <button
                 type="button"
-                className="btn ghost"
+                className="btn ghost motion-press"
                 onClick={() => {
                   setError(null);
                   setStep(2);
@@ -834,7 +836,7 @@ export function HostFormClient({
               </button>
               <button
                 type="button"
-                className="btn accent"
+                className="btn accent motion-press"
                 onClick={publish}
                 disabled={pending || !form.hostEmail?.trim() || !form.hostName?.trim() || !depositConfirmed}
                 style={{

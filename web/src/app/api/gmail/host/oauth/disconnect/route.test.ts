@@ -5,6 +5,8 @@ import { expectRedirectTo } from "@/test/route-test-helpers";
 const mocks = vi.hoisted(() => ({
   getHostSessionEmail: vi.fn(),
   createServerSupabase: vi.fn(),
+  sendTransactionalEmailResult: vi.fn(),
+  buildGmailConnectForPaymentSyncEmailTemplate: vi.fn(),
 }));
 
 vi.mock("@/lib/auth", () => ({
@@ -13,6 +15,14 @@ vi.mock("@/lib/auth", () => ({
 
 vi.mock("@/lib/supabase-server", () => ({
   createServerSupabase: mocks.createServerSupabase,
+}));
+
+vi.mock("@/lib/send-email", () => ({
+  sendTransactionalEmailResult: mocks.sendTransactionalEmailResult,
+}));
+
+vi.mock("@/lib/email-templates", () => ({
+  buildGmailConnectForPaymentSyncEmailTemplate: mocks.buildGmailConnectForPaymentSyncEmailTemplate,
 }));
 
 vi.mock("@/lib/env", async () => {
@@ -29,6 +39,14 @@ describe("api/gmail/host/oauth/disconnect", () => {
   beforeEach(() => {
     mocks.getHostSessionEmail.mockReset();
     mocks.createServerSupabase.mockReset();
+    mocks.sendTransactionalEmailResult.mockReset();
+    mocks.buildGmailConnectForPaymentSyncEmailTemplate.mockReset();
+    mocks.buildGmailConnectForPaymentSyncEmailTemplate.mockReturnValue({
+      subject: "Connect Gmail for payment sync",
+      html: "<p>Connect Gmail</p>",
+      text: "Connect Gmail",
+    });
+    mocks.sendTransactionalEmailResult.mockResolvedValue({ ok: true });
   });
 
   it("redirects to host login if unauthenticated", async () => {
@@ -48,6 +66,16 @@ describe("api/gmail/host/oauth/disconnect", () => {
 
     expect(fromMock).toHaveBeenCalledWith("gmail_connections");
     expect(eqMock).toHaveBeenCalledWith("id", "host:host@example.com");
+    expect(mocks.buildGmailConnectForPaymentSyncEmailTemplate).toHaveBeenCalledWith({
+      reconnectUrl: "http://localhost:3000/api/gmail/host/oauth/start",
+      reason: "disconnect",
+    });
+    expect(mocks.sendTransactionalEmailResult).toHaveBeenCalledWith({
+      to: "host@example.com",
+      subject: "Connect Gmail for payment sync",
+      html: "<p>Connect Gmail</p>",
+      text: "Connect Gmail",
+    });
     expectRedirectTo(response, "http://localhost:3000/host?gmail=disconnected");
   });
 });

@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SeoJsonLd } from "@/components/shared/SeoJsonLd";
-import { SignupForm } from "@/components/features/detail/SignupForm";
+import { GameDetailSignupSection } from "@/components/features/detail/GameDetailSignupSection";
 import { KindBadge } from "@/components/shared/UiPrimitives";
 import { COMING_SOON_LABEL, isGameKindComingSoon } from "@/lib/game-kind-availability";
 import { gameOrganizationDisplayName } from "@/lib/game-organization";
@@ -32,38 +32,6 @@ function initials(name: string): string {
     .toUpperCase();
 }
 
-function DetailIconCalendar() {
-  return (
-    <svg width={14} height={14} viewBox="0 0 24 24" fill="none" aria-hidden>
-      <rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="2" />
-      <path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function DetailIconMapPin() {
-  return (
-    <svg width={14} height={14} viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M12 21s7-4.35 7-11a7 7 0 1 0-14 0c0 6.65 7 11 7 11z"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
-      <circle cx="12" cy="10" r="2.5" stroke="currentColor" strokeWidth="2" />
-    </svg>
-  );
-}
-
-function DetailIconUser() {
-  return (
-    <svg width={14} height={14} viewBox="0 0 24 24" fill="none" aria-hidden>
-      <circle cx="12" cy="8" r="3.5" stroke="currentColor" strokeWidth="2" />
-      <path d="M5 20c1.8-4 12.2-4 14 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 export async function GameDetailPage({ gameId }: { gameId: string }) {
   const [data, hostSessionEmail] = await Promise.all([getGameWithRoster(gameId), getHostSessionEmail()]);
   if (!data) notFound();
@@ -87,6 +55,7 @@ export async function GameDetailPage({ gameId }: { gameId: string }) {
 
   const fg = dark ? "var(--paper)" : "var(--ink)";
   const fgMuted = dark ? "rgba(251,248,241,.85)" : "var(--ink-2)";
+  const labelColor = dark ? "rgba(251,248,241,.65)" : undefined;
   const chipOutline = dark
     ? { borderColor: "var(--paper)", color: "var(--paper)" }
     : {};
@@ -104,8 +73,8 @@ export async function GameDetailPage({ gameId }: { gameId: string }) {
       <SeoJsonLd data={schemaData} />
       <SiteHeader />
       <section
+        className={!comingSoonKind ? "game-detail-hero game-detail-hero--mobile-signup-dock" : "game-detail-hero"}
         style={{
-          borderBottom: "2px solid var(--ink)",
           background: dark ? "var(--ink)" : "var(--bg)",
           color: fg,
           position: "relative",
@@ -175,12 +144,12 @@ export async function GameDetailPage({ gameId }: { gameId: string }) {
             margin: "0 auto",
             padding: "8px 18px 40px",
             display: "grid",
-            gridTemplateColumns: "1fr",
             gap: 32,
           }}
           className="detail-hero-grid"
         >
-          <div>
+          <div className="detail-hero-main">
+            <div className="detail-hero-lead">
             <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
               <KindBadge kind={game.kind} invert={dark} />
               <span className="chip outline" style={chipOutline}>
@@ -193,59 +162,20 @@ export async function GameDetailPage({ gameId }: { gameId: string }) {
             <h1 className="display" style={{ fontSize: "clamp(36px, 7vw, 80px)", margin: "0 0 14px", lineHeight: 0.92, letterSpacing: "-.03em", color: fg }}>
               {game.title}
             </h1>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "12px 24px", fontSize: 14, opacity: 0.85, color: fgMuted }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "12px 24px", fontSize: 14, opacity: 0.85, color: fgMuted, marginBottom: 0 }}>
               <div>
                 <strong>{formatDay(game.starts_at)}</strong>
                 {game.kind === "dropin" ? ` · ${formatGameRange(game.starts_at, game.duration_minutes)}` : null}
               </div>
               <div>{venueLine}</div>
               <div>Organizer · {organizerName}</div>
-              <div>Host · {game.host_name}</div>
             </div>
-          </div>
-          <div>
-            {comingSoonKind ? (
-              <div className="card" style={{ padding: 16, border: "2px solid var(--ink)", background: "var(--paper)" }}>
-                <div className="chip warn" style={{ marginBottom: 10 }}>
-                  {COMING_SOON_LABEL}
-                </div>
-                <p style={{ margin: 0, color: "var(--ink-2)", lineHeight: 1.5 }}>
-                  League and Tournament signups are not open yet. Drop-in games are currently live.
-                </p>
-              </div>
-            ) : (
-              <SignupForm
-                gameId={game.id}
-                priceCents={game.price_cents}
-                signedCount={game.signed_count}
-                capacity={game.capacity}
-                hostName={game.host_name}
-                hostEmail={game.host_email}
-                gameTitle={game.title}
-                startsAtDisplay={scheduleForSignup}
-                kind={game.kind}
-              />
-            )}
-          </div>
-        </div>
-      </section>
-
-      <section style={{ maxWidth: 1280, margin: "0 auto", padding: "40px 18px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 32 }} className="detail-body-grid">
-          <div>
-            <div className="label">Format</div>
-            <p style={{ fontSize: 16, lineHeight: 1.6, margin: "0 0 24px", maxWidth: 680, color: "var(--ink-2)" }}>
-              {formatParagraph}
-            </p>
-            <div className="label">What to bring</div>
-            <ul style={{ paddingLeft: 18, fontSize: 14, color: "var(--ink-2)", lineHeight: 1.7, margin: "0 0 24px" }}>
-              <li>Indoor court shoes (non-marking)</li>
-              <li>Water fountain on site</li>
-              <li>Knee pads if you&apos;ve got them</li>
-              <li>A light + dark shirt for team mixing</li>
-            </ul>
-            <div className="label">Your host</div>
-            <div className="card" style={{ display: "flex", gap: 14, alignItems: "center", padding: 14 }}>
+            </div>
+            <div className="detail-hero-rest">
+            <div className="label" style={{ ...(labelColor ? { color: labelColor } : {}), marginTop: 0 }}>
+              Your host
+            </div>
+            <div className="card" style={{ display: "flex", gap: 14, alignItems: "center", padding: 14, marginBottom: 24 }}>
               <div
                 style={{
                   width: 54,
@@ -273,12 +203,22 @@ export async function GameDetailPage({ gameId }: { gameId: string }) {
                 Message
               </button>
             </div>
-          </div>
-          <div>
-            <div className="label">Roster · {roster.length}</div>
-            <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+            <div className="label" style={labelColor ? { color: labelColor } : undefined}>
+              Roster · {roster.length}
+            </div>
+            <div
+              className="card"
+              style={{
+                padding: 0,
+                overflow: "hidden",
+                marginTop: 0,
+                marginBottom: 24,
+                background: dark ? "rgba(251,248,241,.08)" : "var(--paper)",
+                borderColor: dark ? "rgba(251,248,241,.35)" : undefined,
+              }}
+            >
               {roster.length === 0 ? (
-                <div style={{ padding: 14, fontSize: 13, color: "var(--ink-2)" }}>No one yet.</div>
+                <div style={{ padding: 14, fontSize: 13, color: fgMuted }}>No one yet.</div>
               ) : (
                 <>
                   {rosterPreview.map((row, index) => (
@@ -290,6 +230,7 @@ export async function GameDetailPage({ gameId }: { gameId: string }) {
                         gap: 10,
                         padding: "12px 14px",
                         borderBottom: index === rosterPreview.length - 1 && moreCount === 0 ? "none" : "1px dashed var(--ink-3)",
+                        color: fg,
                       }}
                     >
                       <div
@@ -297,7 +238,7 @@ export async function GameDetailPage({ gameId }: { gameId: string }) {
                           width: 28,
                           height: 28,
                           borderRadius: "50%",
-                          background: "var(--bg)",
+                          background: dark ? "rgba(251,248,241,.12)" : "var(--bg)",
                           border: "1.5px solid var(--ink)",
                           display: "grid",
                           placeItems: "center",
@@ -319,8 +260,8 @@ export async function GameDetailPage({ gameId }: { gameId: string }) {
                         padding: "12px 14px",
                         textAlign: "center",
                         fontSize: 11,
-                        color: "var(--ink-3)",
-                        background: "var(--bg)",
+                        color: fgMuted,
+                        background: dark ? "rgba(251,248,241,.06)" : "var(--bg)",
                         letterSpacing: ".12em",
                         fontWeight: 700,
                       }}
@@ -331,6 +272,46 @@ export async function GameDetailPage({ gameId }: { gameId: string }) {
                 </>
               )}
             </div>
+            <div className="label" style={labelColor ? { color: labelColor } : undefined}>
+              Format
+            </div>
+            <p style={{ fontSize: 16, lineHeight: 1.6, margin: "0 0 24px", maxWidth: 680, color: fgMuted }}>
+              {formatParagraph}
+            </p>
+            <div className="label" style={labelColor ? { color: labelColor } : undefined}>
+              What to bring
+            </div>
+            <ul style={{ paddingLeft: 18, fontSize: 14, color: fgMuted, lineHeight: 1.7, margin: "0 0 24px" }}>
+              <li>Indoor court shoes (non-marking)</li>
+              <li>Water fountain on site</li>
+              <li>Knee pads if you&apos;ve got them</li>
+              <li>A light + dark shirt for team mixing</li>
+            </ul>
+            </div>
+          </div>
+          <div className="detail-hero-signup">
+            {comingSoonKind ? (
+              <div className="card" style={{ padding: 16, border: "2px solid var(--ink)", background: "var(--paper)" }}>
+                <div className="chip warn" style={{ marginBottom: 10 }}>
+                  {COMING_SOON_LABEL}
+                </div>
+                <p style={{ margin: 0, color: "var(--ink-2)", lineHeight: 1.5 }}>
+                  League and Tournament signups are not open yet. Drop-in games are currently live.
+                </p>
+              </div>
+            ) : (
+              <GameDetailSignupSection
+                gameId={game.id}
+                priceCents={game.price_cents}
+                signedCount={game.signed_count}
+                capacity={game.capacity}
+                hostName={game.host_name}
+                hostEmail={game.host_email}
+                gameTitle={game.title}
+                startsAtDisplay={scheduleForSignup}
+                kind={game.kind}
+              />
+            )}
           </div>
         </div>
       </section>

@@ -3,8 +3,14 @@
 import { revalidatePath } from "next/cache";
 
 import { getHostSessionEmail } from "@/lib/auth";
-import { buildPlayerPaymentConfirmedEmailTemplate } from "@/lib/email-templates";
+import {
+  buildPlayerPaymentConfirmedEmailTemplate,
+  buildPlayerSignupPaymentEmailTemplate,
+} from "@/lib/email-templates";
 import { appOrigin } from "@/lib/env";
+import { hostGmailConnectionId } from "@/lib/host-gmail";
+import { DEFAULT_ORGANIZATION_NAME } from "@/lib/organization-default";
+import { PAYMENT_CODE_EXPIRY_MINUTES } from "@/lib/registration-policy";
 import { createPlayerCancelSignupLinkToken } from "@/lib/magic-link";
 import { sendTransactionalEmailResult } from "@/lib/send-email";
 import { createServerSupabase } from "@/lib/supabase-server";
@@ -28,7 +34,9 @@ export async function setSignupPaymentStatusForHost(formData: FormData): Promise
 
   const { data: game, error: gameErr } = await supabase
     .from("games")
-    .select("id, title, starts_at, host_name, host_email, price_cents, owner_email, signed_count, waitlist_count")
+    .select(
+      "id, title, starts_at, host_name, host_email, price_cents, owner_email, signed_count, waitlist_count, capacity, organizations ( name )"
+    )
     .eq("id", parsed.data.gameId)
     .maybeSingle<{
       id: string;
@@ -40,6 +48,8 @@ export async function setSignupPaymentStatusForHost(formData: FormData): Promise
       owner_email: string;
       signed_count: number;
       waitlist_count: number;
+      capacity: number;
+      organizations: { name: string } | { name: string }[] | null;
     }>();
 
   if (gameErr || !game) {
@@ -52,7 +62,7 @@ export async function setSignupPaymentStatusForHost(formData: FormData): Promise
 
   const { data: signup } = await supabase
     .from("signups")
-    .select("id, player_name, player_email, payment_status, status")
+    .select("id, player_name, player_email, payment_status, status, payment_code, added_by_name, refund_owner_name, organizations ( name )")
     .eq("id", parsed.data.signupId)
     .eq("game_id", parsed.data.gameId)
     .maybeSingle<{
@@ -60,7 +70,11 @@ export async function setSignupPaymentStatusForHost(formData: FormData): Promise
       player_name: string;
       player_email: string;
       payment_status: "paid" | "pending" | "refund" | "canceled";
-      status: "active" | "waitlist" | "canceled" | "removed" | "deleted";
+      status: "active" | "waitlist" | "removed" | "deleted";
+      payment_code: string;
+      added_by_name: string;
+      refund_owner_name: string;
+      organizations: { name: string } | { name: string }[] | null;
     }>();
 
   if (!signup) {
@@ -71,13 +85,33 @@ export async function setSignupPaymentStatusForHost(formData: FormData): Promise
   const shouldAutoCancelRoster =
     (nextPaymentStatus === "refund" || nextPaymentStatus === "canceled") &&
     (signup.status === "active" || signup.status === "waitlist");
-  const nextRosterStatus = shouldAutoCancelRoster ? "canceled" : signup.status;
 
-  const updatePayload: { payment_status: "paid" | "pending" | "refund" | "canceled"; status?: "canceled" } = {
+  /** After refund/canceled payment, roster was set to `removed` and counts were decremented. Restoring payment must put the row back on active or waitlist or it matches neither host table. */
+  const shouldRestoreRosterFromArchivedPayment =
+    (signup.payment_status === "refund" || signup.payment_status === "canceled") &&
+    (nextPaymentStatus === "paid" || nextPaymentStatus === "pending") &&
+    signup.status === "removed";
+
+  const restoredRosterStatus: "active" | "waitlist" | null = shouldRestoreRosterFromArchivedPayment
+    ? game.signed_count < game.capacity
+      ? "active"
+      : "waitlist"
+    : null;
+
+  const nextRosterStatus = shouldAutoCancelRoster
+    ? "removed"
+    : restoredRosterStatus ?? signup.status;
+
+  const updatePayload: {
+    payment_status: "paid" | "pending" | "refund" | "canceled";
+    status?: "removed" | "active" | "waitlist";
+  } = {
     payment_status: nextPaymentStatus,
   };
   if (shouldAutoCancelRoster) {
-    updatePayload.status = "canceled";
+    updatePayload.status = "removed";
+  } else if (restoredRosterStatus) {
+    updatePayload.status = restoredRosterStatus;
   }
 
   const { error: upErr } = await supabase
@@ -102,9 +136,22 @@ export async function setSignupPaymentStatusForHost(formData: FormData): Promise
         .update({ waitlist_count: Math.max(0, game.waitlist_count - 1) })
         .eq("id", parsed.data.gameId);
     }
+  } else if (restoredRosterStatus) {
+    if (restoredRosterStatus === "active") {
+      await supabase
+        .from("games")
+        .update({ signed_count: game.signed_count + 1 })
+        .eq("id", parsed.data.gameId);
+    } else {
+      await supabase
+        .from("games")
+        .update({ waitlist_count: game.waitlist_count + 1 })
+        .eq("id", parsed.data.gameId);
+    }
   }
 
-  const becamePaid = nextPaymentStatus === "paid" && signup?.payment_status !== "paid" && nextRosterStatus !== "deleted";
+  const becamePaid =
+    nextPaymentStatus === "paid" && signup?.payment_status !== "paid" && nextRosterStatus !== "deleted";
   if (becamePaid && signup) {
     const cancelExpiryMs = Date.parse(game.starts_at) - 2 * 60 * 60 * 1000;
     const canCancel = Number.isFinite(cancelExpiryMs) && cancelExpiryMs > Date.now();
@@ -139,6 +186,54 @@ export async function setSignupPaymentStatusForHost(formData: FormData): Promise
       subject: template.subject,
       html: template.html,
       text: template.text,
+    });
+  }
+
+  const becamePending =
+    nextPaymentStatus === "pending" && signup.payment_status !== "pending" && nextRosterStatus !== "deleted";
+  if (becamePending && signup) {
+    const hostConnectionId = hostGmailConnectionId(game.host_email);
+    const { data: hostConnection } = await supabase
+      .from("gmail_connections")
+      .select("id")
+      .eq("id", hostConnectionId)
+      .eq("active", true)
+      .maybeSingle<{ id: string }>();
+    const manualOnly = !hostConnection;
+
+    const presenterOrg = Array.isArray(game.organizations) ? game.organizations[0] : game.organizations;
+    const gameOrganizerName = presenterOrg?.name?.trim() || DEFAULT_ORGANIZATION_NAME;
+    const playerOrg = Array.isArray(signup.organizations) ? signup.organizations[0] : signup.organizations;
+    const playerOrganizationName = playerOrg?.name?.trim() || DEFAULT_ORGANIZATION_NAME;
+
+    const startsAtDisplay = new Date(game.starts_at).toLocaleString("en-CA", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+    const pendingTemplate = buildPlayerSignupPaymentEmailTemplate({
+      gameTitle: game.title,
+      startsAtDisplay,
+      gameOrganizerName,
+      playerOrganizationName,
+      hostName: game.host_name,
+      hostEmail: game.host_email,
+      playerName: signup.player_name,
+      paymentCode: signup.payment_code,
+      amountCents: game.price_cents,
+      playerCount: 1,
+      addedByName: signup.added_by_name,
+      refundOwnerName: signup.refund_owner_name,
+      deadlineMinutes: PAYMENT_CODE_EXPIRY_MINUTES,
+      manualOnly,
+    });
+    await sendTransactionalEmailResult({
+      to: signup.player_email,
+      subject: pendingTemplate.subject,
+      html: pendingTemplate.html,
+      text: pendingTemplate.text,
     });
   }
 
@@ -190,7 +285,7 @@ export async function setSignupRosterStatusForHost(formData: FormData): Promise<
     .eq("game_id", parsed.data.gameId)
     .maybeSingle<{
       id: string;
-      status: "active" | "waitlist" | "canceled" | "removed" | "deleted";
+      status: "active" | "waitlist" | "removed" | "deleted";
       payment_status: "paid" | "pending" | "refund" | "canceled";
     }>();
 
@@ -222,7 +317,7 @@ export async function setSignupRosterStatusForHost(formData: FormData): Promise<
     if (nextStatus === "waitlist") {
       signedCount -= 1;
       waitlistCount += 1;
-    } else if (nextStatus === "canceled" || nextStatus === "removed" || nextStatus === "deleted") {
+    } else if (nextStatus === "removed" || nextStatus === "deleted") {
       signedCount -= 1;
     }
   } else if (from === "waitlist") {
@@ -235,7 +330,7 @@ export async function setSignupRosterStatusForHost(formData: FormData): Promise<
       }
       waitlistCount -= 1;
       signedCount += 1;
-    } else if (nextStatus === "canceled" || nextStatus === "removed" || nextStatus === "deleted") {
+    } else if (nextStatus === "removed" || nextStatus === "deleted") {
       waitlistCount -= 1;
     }
   }

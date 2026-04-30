@@ -13,7 +13,7 @@ export type HostSetSignupPaymentStatusInput = z.infer<typeof hostSetSignupPaymen
 export const hostSetSignupRosterStatusSchema = z.object({
   gameId: z.string().uuid(),
   signupId: z.string().uuid(),
-  status: z.enum(["active", "waitlist", "canceled", "removed", "deleted"]),
+  status: z.enum(["active", "waitlist", "removed", "deleted"]),
 });
 
 export type HostSetSignupRosterStatusInput = z.infer<typeof hostSetSignupRosterStatusSchema>;

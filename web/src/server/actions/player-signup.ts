@@ -30,7 +30,7 @@ export async function cancelSignupForPlayer(formData: FormData): Promise<ActionR
       id: string;
       game_id: string;
       player_email: string;
-      status: "active" | "waitlist" | "canceled" | "removed" | "deleted";
+      status: "active" | "waitlist" | "removed" | "deleted";
       payment_status: "paid" | "pending" | "refund" | "canceled";
     }>();
 
@@ -42,12 +42,12 @@ export async function cancelSignupForPlayer(formData: FormData): Promise<ActionR
     return { ok: false, error: "You can only cancel your own signup." };
   }
 
-  if (signup.status === "canceled" || signup.status === "removed" || signup.status === "deleted") {
+  if (signup.status === "removed" || signup.status === "deleted") {
     return { ok: true, data: null };
   }
 
-  if (signup.payment_status !== "paid") {
-    return { ok: false, error: "Only confirmed signups can be cancelled here." };
+  if (signup.payment_status !== "paid" && signup.payment_status !== "pending") {
+    return { ok: false, error: "This signup can no longer be cancelled here." };
   }
 
   const { data: game, error: gameErr } = await supabase
@@ -64,9 +64,10 @@ export async function cancelSignupForPlayer(formData: FormData): Promise<ActionR
     return { ok: false, error: "Cancellation is only available until 2 hours before game start." };
   }
 
+  const nextPaymentStatus = signup.payment_status === "paid" ? "refund" : "canceled";
   const { error: cancelErr } = await supabase
     .from("signups")
-    .update({ status: "canceled", payment_status: "refund" })
+    .update({ status: "removed", payment_status: nextPaymentStatus })
     .eq("id", parsed.data.signupId)
     .eq("game_id", parsed.data.gameId)
     .in("status", ["active", "waitlist"]);

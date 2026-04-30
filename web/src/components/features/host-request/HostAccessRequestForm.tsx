@@ -178,7 +178,7 @@ export function HostAccessRequestForm({
       </div>
       <button
         type="submit"
-        className="btn accent"
+        className="btn accent motion-press"
         disabled={pending || !email.includes("@") || !name.trim() || organizations.length === 0}
         aria-busy={pending}
         style={{ width: "100%" }}

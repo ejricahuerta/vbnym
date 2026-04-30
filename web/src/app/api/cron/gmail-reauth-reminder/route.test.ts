@@ -29,8 +29,7 @@ describe("api/cron/gmail-reauth-reminder", () => {
     mocks.sendGmailReauthReminder.mockResolvedValueOnce({
       ok: true,
       sent: 2,
-      universal: { ok: true, sent: 1, skipped: "sent" },
-      games: { ok: true, sent: 1, skipped: "sent" },
+      skipped: "sent",
     });
     const response = await POST(
       buildRequest({
@@ -39,10 +38,11 @@ describe("api/cron/gmail-reauth-reminder", () => {
         headers: { authorization: "Bearer test-secret" },
       })
     );
-    const body = await readJson<{ ok: boolean; sent: number }>(response);
+    const body = await readJson<{ ok: boolean; sent: number; skipped: string }>(response);
     expect(response.status).toBe(200);
     expect(body.ok).toBe(true);
     expect(body.sent).toBe(2);
+    expect(body.skipped).toBe("sent");
   });
 
   it("returns 500 when reminder send throws", async () => {

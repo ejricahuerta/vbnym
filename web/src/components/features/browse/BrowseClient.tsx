@@ -99,8 +99,8 @@ export function BrowseClient({
           <span className="serif-display" style={{ textTransform: "lowercase" }}>this week.</span>
         </h1>
         <div style={{ display: "flex", gap: 6 }}>
-          <button onClick={() => setView("grid")} className={`btn sm ${view === "grid" ? "accent" : "ghost"}`}>Grid</button>
-          <button onClick={() => setView("list")} className={`btn sm ${view === "list" ? "accent" : "ghost"}`}>List</button>
+          <button onClick={() => setView("grid")} className={`btn sm motion-press ${view === "grid" ? "accent" : "ghost"}`}>Grid</button>
+          <button onClick={() => setView("list")} className={`btn sm motion-press ${view === "list" ? "accent" : "ghost"}`}>List</button>
         </div>
       </div>
 
@@ -112,7 +112,7 @@ export function BrowseClient({
             onClick={() => {
               setTab(option.id);
             }}
-            className="browse-filter-btn"
+            className="browse-filter-btn motion-press"
             style={{
               background: tab === option.id ? "var(--ink)" : "transparent",
               color: tab === option.id ? "var(--paper)" : "var(--ink)",
@@ -315,13 +315,13 @@ export function BrowseClient({
             );
             if (comingSoon) {
               return (
-                <div key={g.id} className={isLeague ? "liftable" : "card liftable"} style={{ display: "block", padding: 0, overflow: "hidden", opacity: 0.72 }}>
+                <div key={g.id} className={isLeague ? "liftable motion-press" : "card liftable motion-press"} style={{ display: "block", padding: 0, overflow: "hidden", opacity: 0.72 }}>
                   {cardBody}
                 </div>
               );
             }
             return (
-              <Link key={g.id} href={`/games/${g.id}`} className={isLeague ? "liftable" : "card liftable"} style={{ display: "block", padding: 0, overflow: "hidden" }}>
+              <Link key={g.id} href={`/games/${g.id}`} className={isLeague ? "liftable motion-press" : "card liftable motion-press"} style={{ display: "block", padding: 0, overflow: "hidden" }}>
                 {cardBody}
               </Link>
             );
