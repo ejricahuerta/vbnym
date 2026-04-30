@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactElement } from "react";
 import { useState, useTransition } from "react";
 
 import { signupForGame } from "@/server/actions/signup";
@@ -9,7 +10,7 @@ type SignupStep = "intro" | "form" | "interac" | "sent";
 
 type SignupFormInitialStep = "intro" | "form";
 
-function SignupHeaderCloseButton({ onClick }: { onClick: () => void }): JSX.Element {
+function SignupHeaderCloseButton({ onClick }: { onClick: () => void }): ReactElement {
   return (
     <button
       type="button"
