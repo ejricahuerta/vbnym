@@ -61,7 +61,7 @@ export const listLiveGames = cache(async (): Promise<GameRow[]> => {
   }
 });
 
-/** Live games owned by the host (magic-link session email → `owner_email`). */
+/** Live and cancelled games owned by the host (magic-link session email → `owner_email`). */
 export async function listLiveGamesForHost(hostEmail: string): Promise<GameRow[]> {
   const normalized = hostEmail.trim().toLowerCase();
   if (!normalized) return [];
@@ -70,7 +70,7 @@ export async function listLiveGamesForHost(hostEmail: string): Promise<GameRow[]
     const { data } = await supabase
       .from("games")
       .select(GAME_LIST_SELECT)
-      .eq("status", "live")
+      .in("status", ["live", "cancelled"])
       .ilike("owner_email", normalized)
       .order("starts_at", { ascending: true });
     return (data ?? []) as unknown as GameRow[];

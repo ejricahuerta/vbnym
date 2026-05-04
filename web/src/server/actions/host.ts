@@ -10,6 +10,7 @@ import { appOrigin } from "@/lib/env";
 import { sendTransactionalEmailResult } from "@/lib/send-email";
 import { createServerSupabase } from "@/lib/supabase-server";
 import {
+  parseHostCancelLiveGameFormData,
   parseHostInteracEmailFormData,
   parseHostLiveGameUpdateFormData,
   parseHostPublishFormData,
@@ -102,9 +103,9 @@ export async function updateHostInteracEmail(formData: FormData): Promise<Action
   const normalizedSession = sessionEmail.trim().toLowerCase();
   const { data: row, error: fetchError } = await supabase
     .from("games")
-    .select("id, owner_email, host_email")
+    .select("id, owner_email, host_email, status")
     .eq("id", parsed.data.gameId)
-    .maybeSingle<{ id: string; owner_email: string; host_email: string }>();
+    .maybeSingle<{ id: string; owner_email: string; host_email: string; status: string }>();
 
   if (fetchError || !row) {
     return { ok: false, error: "Game not found." };
@@ -112,6 +113,10 @@ export async function updateHostInteracEmail(formData: FormData): Promise<Action
 
   if (row.owner_email.trim().toLowerCase() !== normalizedSession) {
     return { ok: false, error: "You can only update games you host." };
+  }
+
+  if (row.status !== "live") {
+    return { ok: false, error: "Payment email can only be updated for live games." };
   }
 
   const { error: updateError } = await supabase
@@ -168,9 +173,9 @@ export async function updateHostLiveGameDetails(formData: FormData): Promise<Act
 
   const { data: row, error: fetchError } = await supabase
     .from("games")
-    .select("id, owner_email, signed_count")
+    .select("id, owner_email, signed_count, status")
     .eq("id", parsed.data.gameId)
-    .maybeSingle<{ id: string; owner_email: string; signed_count: number }>();
+    .maybeSingle<{ id: string; owner_email: string; signed_count: number; status: string }>();
 
   if (fetchError || !row) {
     return { ok: false, error: "Game not found." };
@@ -178,6 +183,10 @@ export async function updateHostLiveGameDetails(formData: FormData): Promise<Act
 
   if (row.owner_email.trim().toLowerCase() !== normalizedSession) {
     return { ok: false, error: "You can only update games you host." };
+  }
+
+  if (row.status !== "live") {
+    return { ok: false, error: "Details can only be edited for live games." };
   }
 
   if (parsed.data.capacity < row.signed_count) {
@@ -206,6 +215,53 @@ export async function updateHostLiveGameDetails(formData: FormData): Promise<Act
 
   if (updateError) {
     return { ok: false, error: updateError.message ?? "Could not update game details." };
+  }
+
+  revalidatePath("/browse");
+  revalidatePath("/host");
+  revalidatePath(`/games/${parsed.data.gameId}`);
+  revalidatePath("/admin");
+  return { ok: true, data: null };
+}
+
+export async function cancelHostLiveGame(formData: FormData): Promise<ActionResult<null>> {
+  const parsed = parseHostCancelLiveGameFormData(formData);
+  if (!parsed.ok) return parsed;
+
+  const sessionEmail = await getHostSessionEmail();
+  if (!sessionEmail) {
+    return { ok: false, error: "Sign in as host to cancel a game." };
+  }
+
+  const supabase = createServerSupabase();
+  const normalizedSession = sessionEmail.trim().toLowerCase();
+
+  const { data: row, error: fetchError } = await supabase
+    .from("games")
+    .select("id, owner_email, status")
+    .eq("id", parsed.data.gameId)
+    .maybeSingle<{ id: string; owner_email: string; status: string }>();
+
+  if (fetchError || !row) {
+    return { ok: false, error: "Game not found." };
+  }
+
+  if (row.owner_email.trim().toLowerCase() !== normalizedSession) {
+    return { ok: false, error: "You can only cancel games you host." };
+  }
+
+  if (row.status !== "live") {
+    return { ok: false, error: "This game is not live, so it cannot be cancelled here." };
+  }
+
+  const { error: updateError } = await supabase
+    .from("games")
+    .update({ status: "cancelled" })
+    .eq("id", parsed.data.gameId)
+    .eq("status", "live");
+
+  if (updateError) {
+    return { ok: false, error: updateError.message ?? "Could not cancel game." };
   }
 
   revalidatePath("/browse");

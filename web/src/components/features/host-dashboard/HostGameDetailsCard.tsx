@@ -99,6 +99,23 @@ export function HostGameDetailsCard({
     return base;
   }, [skillLevel]);
 
+  if (game.status === "cancelled") {
+    return (
+      <div className="card" style={{ padding: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
+          <div className="label">Game details</div>
+          <KindBadge kind={game.kind} />
+        </div>
+        <p style={{ margin: "0 0 10px", fontSize: 13, lineHeight: 1.45, color: "var(--ink-2)" }}>
+          This game was cancelled. Listing edits are closed → you can still use the roster for refunds and records.
+        </p>
+        <p className="mono" style={{ margin: 0, fontSize: 12, letterSpacing: ".04em", color: "var(--ink-3)" }}>
+          {game.title} · {game.venue_name}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="card" style={{ padding: 16 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>

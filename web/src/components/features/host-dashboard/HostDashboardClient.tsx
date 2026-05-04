@@ -85,6 +85,7 @@ type HostPayoutAndGmailCardProps =
       interacPending: boolean;
       interacError: string | null;
       onSaveInterac: () => void;
+      interacReadOnly?: boolean;
     };
 
 function HostGmailFooterButtons({
@@ -215,6 +216,7 @@ function HostPayoutAndGmailCard(props: HostPayoutAndGmailCardProps) {
                 autoComplete="email"
                 value={props.interacDraft}
                 onChange={(e) => props.onInteracDraftChange(e.target.value)}
+                disabled={props.interacReadOnly}
                 style={{
                   width: "100%",
                   minWidth: 0,
@@ -226,7 +228,7 @@ function HostPayoutAndGmailCard(props: HostPayoutAndGmailCardProps) {
               <button
                 type="button"
                 className="btn ghost"
-                disabled={props.interacPending || gmailPending}
+                disabled={props.interacPending || gmailPending || Boolean(props.interacReadOnly)}
                 aria-busy={props.interacPending}
                 aria-label={props.interacPending ? "Saving payout email" : "Save payout email"}
                 onClick={props.onSaveInterac}
@@ -305,12 +307,14 @@ function hostGmailFlash(gmailParam: string | null): { tone: "ok" | "warn" | "neu
 export function HostDashboardClient({
   activeGames,
   pastDropinGames,
+  cancelledGames,
   signupsByGameId,
   hostGmailConnected,
   organizations,
 }: {
   activeGames: GameRow[];
   pastDropinGames: GameRow[];
+  cancelledGames: GameRow[];
   signupsByGameId: Record<string, SignupRow[]>;
   hostGmailConnected: boolean;
   organizations: OrganizationRow[];
@@ -342,10 +346,13 @@ export function HostDashboardClient({
   const [reportError, setReportError] = useState<string | null>(null);
   const [reportPending, startReportTransition] = useTransition();
   const [pastGamesModalOpen, setPastGamesModalOpen] = useState(false);
+  const [cancelGameModalOpen, setCancelGameModalOpen] = useState(false);
+  const [cancelGameError, setCancelGameError] = useState<string | null>(null);
+  const [cancelGamePending, startCancelGameTransition] = useTransition();
 
   const mergedGames = useMemo(
-    () => [...activeGames, ...pastDropinGames],
-    [activeGames, pastDropinGames]
+    () => [...activeGames, ...pastDropinGames, ...cancelledGames],
+    [activeGames, pastDropinGames, cancelledGames]
   );
 
   const pastDropinsSorted = useMemo(
@@ -353,12 +360,18 @@ export function HostDashboardClient({
     [pastDropinGames]
   );
 
+  const cancelledSorted = useMemo(
+    () => [...cancelledGames].sort((a, b) => Date.parse(b.starts_at) - Date.parse(a.starts_at)),
+    [cancelledGames]
+  );
+
   const selectedGameId = useMemo(() => {
     if (mergedGames.length === 0) return "";
     if (pickedGameId && mergedGames.some((g) => g.id === pickedGameId)) return pickedGameId;
-    if (activeGames.length > 0) return activeGames[0].id;
-    return pastDropinsSorted[0]!.id;
-  }, [mergedGames, activeGames, pastDropinsSorted, pickedGameId]);
+    if (activeGames.length > 0) return activeGames[0]!.id;
+    if (pastDropinsSorted.length > 0) return pastDropinsSorted[0]!.id;
+    return cancelledSorted[0]!.id;
+  }, [mergedGames, activeGames, pastDropinsSorted, cancelledSorted, pickedGameId]);
 
   const selectedGame = useMemo(
     () => mergedGames.find((game) => game.id === selectedGameId) ?? mergedGames[0],
@@ -366,18 +379,24 @@ export function HostDashboardClient({
   );
 
   const gameSelectOptions = useMemo(() => {
-    if (activeGames.length === 0) return pastDropinsSorted;
+    if (activeGames.length === 0) return [...pastDropinsSorted, ...cancelledSorted];
     const list = [...activeGames];
     const sel = mergedGames.find((g) => g.id === selectedGameId);
-    if (
-      sel &&
-      !list.some((g) => g.id === sel.id) &&
-      pastDropinGames.some((g) => g.id === sel.id)
-    ) {
-      list.push(sel);
+    if (sel && !list.some((g) => g.id === sel.id)) {
+      const inPast = pastDropinGames.some((g) => g.id === sel.id);
+      const inCancelled = cancelledGames.some((g) => g.id === sel.id);
+      if (inPast || inCancelled) list.push(sel);
     }
     return list;
-  }, [activeGames, mergedGames, pastDropinGames, pastDropinsSorted, selectedGameId]);
+  }, [
+    activeGames,
+    cancelledGames,
+    cancelledSorted,
+    mergedGames,
+    pastDropinGames,
+    pastDropinsSorted,
+    selectedGameId,
+  ]);
 
   useEffect(() => {
     if (selectedGame) {
@@ -409,6 +428,12 @@ export function HostDashboardClient({
     const id = window.setTimeout(() => setReportError(null), ALERT_AUTO_DISMISS_MS);
     return () => window.clearTimeout(id);
   }, [reportError]);
+
+  useEffect(() => {
+    if (!cancelGameError) return;
+    const id = window.setTimeout(() => setCancelGameError(null), ALERT_AUTO_DISMISS_MS);
+    return () => window.clearTimeout(id);
+  }, [cancelGameError]);
 
   const roster = useMemo(
     () => (selectedGameId ? signupsByGameId[selectedGameId] ?? [] : []),
@@ -639,7 +664,7 @@ export function HostDashboardClient({
   }
 
   function saveInteracEmail(): void {
-    if (!selectedGame) return;
+    if (!selectedGame || selectedGame.status === "cancelled") return;
     setInteracError(null);
     const fd = new FormData();
     fd.set("gameId", selectedGame.id);
@@ -651,6 +676,29 @@ export function HostDashboardClient({
         setInteracError(res.error);
         return;
       }
+      router.refresh();
+    });
+  }
+
+  function closeCancelGameModal(): void {
+    if (cancelGamePending) return;
+    setCancelGameModalOpen(false);
+    setCancelGameError(null);
+  }
+
+  function submitCancelGame(): void {
+    if (!selectedGameId) return;
+    setCancelGameError(null);
+    startCancelGameTransition(async () => {
+      const { cancelHostLiveGame } = await import("@/server/actions/host");
+      const fd = new FormData();
+      fd.set("gameId", selectedGameId);
+      const res = await cancelHostLiveGame(fd);
+      if (!res.ok) {
+        setCancelGameError(res.error);
+        return;
+      }
+      setCancelGameModalOpen(false);
       router.refresh();
     });
   }
@@ -692,30 +740,50 @@ export function HostDashboardClient({
             </span>
           </h1>
           <div className="host-dashboard-hero-actions">
-            <select
-              className="input xl select-input-invert browse-roster-game-select host-dashboard-game-select"
-              aria-label="Select game"
-              value={selectedGameId}
-              onChange={(event) => setPickedGameId(event.target.value)}
-            >
-              {gameSelectOptions.map((game) => {
-                const isPastOnlyRow =
-                  activeGames.length > 0 && pastDropinGames.some((g) => g.id === game.id);
-                return (
-                  <option key={game.id} value={game.id}>
-                    {isPastOnlyRow ? `Past · ${game.title}` : game.title}
-                  </option>
-                );
-              })}
-            </select>
-            {pastDropinGames.length > 0 ? (
+            <div className="host-dashboard-hero-game-picker">
+              <select
+                className="input xl select-input-invert browse-roster-game-select host-dashboard-game-select"
+                aria-label="Select game"
+                value={selectedGameId}
+                onChange={(event) => setPickedGameId(event.target.value)}
+              >
+                {gameSelectOptions.map((game) => {
+                  const isPastOnlyRow =
+                    activeGames.length > 0 && pastDropinGames.some((g) => g.id === game.id);
+                  const isCancelledOption = game.status === "cancelled";
+                  const label = isCancelledOption
+                    ? `Cancelled · ${game.title}`
+                    : isPastOnlyRow
+                      ? `Past · ${game.title}`
+                      : game.title;
+                  return (
+                    <option key={game.id} value={game.id}>
+                      {label}
+                    </option>
+                  );
+                })}
+              </select>
+              {pastDropinGames.length > 0 || cancelledGames.length > 0 ? (
+                <button
+                  type="button"
+                  className="host-dashboard-past-games-link"
+                  onClick={() => setPastGamesModalOpen(true)}
+                >
+                  Past games
+                </button>
+              ) : null}
+            </div>
+            {selectedGame?.status === "live" ? (
               <button
                 type="button"
-                className="btn sm ghost"
-                style={{ height: 44, minHeight: 44, flexShrink: 0 }}
-                onClick={() => setPastGamesModalOpen(true)}
+                className="btn lg invert host-dashboard-hero-cta"
+                style={{ height: 56, minHeight: 56 }}
+                onClick={() => {
+                  setCancelGameError(null);
+                  setCancelGameModalOpen(true);
+                }}
               >
-                Past games
+                Cancel game
               </button>
             ) : null}
             <Link href="/host/new" className="btn lg accent host-dashboard-hero-cta" style={{ height: 56, minHeight: 56 }}>
@@ -782,7 +850,12 @@ export function HostDashboardClient({
                 ))}
               </div>
               <div className="host-roster-toolbar-actions">
-                <button type="button" className="btn sm accent" onClick={openAddPlayerModal}>
+                <button
+                  type="button"
+                  className="btn sm accent"
+                  onClick={openAddPlayerModal}
+                  disabled={selectedGame?.status === "cancelled"}
+                >
                   Add player
                 </button>
               </div>
@@ -1069,6 +1142,7 @@ export function HostDashboardClient({
               interacPending={interacPending}
               interacError={interacError}
               onSaveInterac={saveInteracEmail}
+              interacReadOnly={selectedGame?.status === "cancelled"}
             />
           </div>
         </div>
@@ -1077,7 +1151,7 @@ export function HostDashboardClient({
             role="dialog"
             className="motion-fade-in"
             aria-modal
-            aria-label="Past games"
+            aria-label="Past and cancelled games"
             style={{
               position: "fixed",
               inset: 0,
@@ -1108,37 +1182,126 @@ export function HostDashboardClient({
                   overflowY: "auto",
                 }}
               >
-                {pastDropinsSorted.map((game) => (
-                  <button
-                    key={game.id}
-                    type="button"
-                    className="btn sm ghost"
-                    onClick={() => {
-                      setPickedGameId(game.id);
-                      setPastGamesModalOpen(false);
-                    }}
-                    style={{
-                      justifyContent: "space-between",
-                      textAlign: "left",
-                      width: "100%",
-                      alignItems: "center",
-                      gap: 12,
-                    }}
-                  >
-                    <span style={{ fontWeight: 700, overflowWrap: "anywhere" }}>{game.title}</span>
-                    <span className="mono" style={{ fontSize: 11, flexShrink: 0, letterSpacing: ".04em" }}>
-                      {new Date(game.starts_at).toLocaleDateString("en-CA", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })}
-                    </span>
-                  </button>
-                ))}
+                {pastDropinsSorted.length > 0 ? (
+                  pastDropinsSorted.map((game) => (
+                    <button
+                      key={game.id}
+                      type="button"
+                      className="btn sm ghost"
+                      onClick={() => {
+                        setPickedGameId(game.id);
+                        setPastGamesModalOpen(false);
+                      }}
+                      style={{
+                        justifyContent: "space-between",
+                        textAlign: "left",
+                        width: "100%",
+                        alignItems: "center",
+                        gap: 12,
+                      }}
+                    >
+                      <span style={{ fontWeight: 700, overflowWrap: "anywhere" }}>{game.title}</span>
+                      <span className="mono" style={{ fontSize: 11, flexShrink: 0, letterSpacing: ".04em" }}>
+                        {new Date(game.starts_at).toLocaleDateString("en-CA", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </span>
+                    </button>
+                  ))
+                ) : (
+                  <p className="mono" style={{ margin: 0, fontSize: 12, color: "var(--ink-2)", letterSpacing: ".04em" }}>
+                    No past drop-in sessions.
+                  </p>
+                )}
+                {cancelledSorted.length > 0 ? (
+                  <>
+                    <div className="label" style={{ marginTop: 12, marginBottom: 4, fontSize: 11 }}>
+                      Cancelled
+                    </div>
+                    {cancelledSorted.map((game) => (
+                      <button
+                        key={game.id}
+                        type="button"
+                        className="btn sm ghost"
+                        onClick={() => {
+                          setPickedGameId(game.id);
+                          setPastGamesModalOpen(false);
+                        }}
+                        style={{
+                          justifyContent: "space-between",
+                          textAlign: "left",
+                          width: "100%",
+                          alignItems: "center",
+                          gap: 12,
+                        }}
+                      >
+                        <span style={{ fontWeight: 700, overflowWrap: "anywhere" }}>{game.title}</span>
+                        <span className="mono" style={{ fontSize: 11, flexShrink: 0, letterSpacing: ".04em" }}>
+                          {new Date(game.starts_at).toLocaleDateString("en-CA", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })}
+                        </span>
+                      </button>
+                    ))}
+                  </>
+                ) : null}
               </div>
               <div style={{ marginTop: 14, display: "flex", justifyContent: "flex-end" }}>
                 <button type="button" className="btn sm ghost" onClick={() => setPastGamesModalOpen(false)}>
                   Close
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+        {cancelGameModalOpen ? (
+          <div
+            role="dialog"
+            className="motion-fade-in"
+            aria-modal
+            aria-label="Confirm cancel game"
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(17,17,20,.55)",
+              zIndex: 60,
+              display: "grid",
+              placeItems: "center",
+              padding: 18,
+            }}
+            onClick={closeCancelGameModal}
+          >
+            <div className="card motion-sheet-panel" style={{ width: "min(480px, 100%)", padding: 18 }} onClick={(e) => e.stopPropagation()}>
+              <div className="label" style={{ marginBottom: 8 }}>
+                Host dashboard
+              </div>
+              <h3 className="display" style={{ fontSize: "clamp(22px, 4vw, 30px)", margin: "0 0 10px" }}>
+                Cancel this game?
+              </h3>
+              <p style={{ margin: 0, color: "var(--ink-2)", fontSize: 14, lineHeight: 1.45 }}>
+                This removes the public listing and stops new sign-ups. Players who already signed up stay on your roster so you can handle refunds.
+              </p>
+              {cancelGameError ? (
+                <p role="alert" style={{ margin: "12px 0 0", color: "var(--warn)", fontSize: 13, fontWeight: 600 }}>
+                  {cancelGameError}
+                </p>
+              ) : null}
+              <div style={{ marginTop: 14, display: "flex", justifyContent: "flex-end", gap: 8, flexWrap: "wrap" }}>
+                <button type="button" className="btn sm ghost" onClick={closeCancelGameModal} disabled={cancelGamePending}>
+                  Keep game
+                </button>
+                <button
+                  type="button"
+                  className="btn sm accent"
+                  onClick={submitCancelGame}
+                  disabled={cancelGamePending}
+                  aria-busy={cancelGamePending}
+                >
+                  {cancelGamePending ? "Cancelling..." : "Yes, cancel game"}
                 </button>
               </div>
             </div>
