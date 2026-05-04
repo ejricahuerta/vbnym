@@ -1785,16 +1785,14 @@ select.host-dashboard-game-select.input.xl.browse-roster-game-select {
   max-width: 100%;
 }
 
-.host-dashboard-archived-row,
-.host-dashboard-intake-row {
+.host-dashboard-archived-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
   align-items: center;
 }
 
-.host-dashboard-archived-row > span:first-child,
-.host-dashboard-intake-row > span:first-child {
+.host-dashboard-archived-row > span:first-child {
   min-width: 0;
   overflow-wrap: anywhere;
 }
@@ -1833,18 +1831,6 @@ select.host-dashboard-game-select.input.xl.browse-roster-game-select {
     max-width: none !important;
     transform: none !important;
     box-sizing: border-box;
-  }
-}
-
-@media (max-width: 520px) {
-  .host-dashboard-intake-row {
-    grid-template-columns: minmax(0, 1fr);
-    align-items: start;
-    gap: 6px;
-  }
-
-  .host-dashboard-intake-row > span:last-child {
-    justify-self: start;
   }
 }
 

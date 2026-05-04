@@ -11,9 +11,10 @@ import {
   useTransition,
 } from "react";
 
+import { HostGameDetailsCard } from "@/components/features/host-dashboard/HostGameDetailsCard";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { gameOrganizationDisplayName } from "@/lib/game-organization";
-import type { GameRow, SignupPaymentStatus, SignupRow } from "@/types/domain";
+import type { GameRow, OrganizationRow, SignupPaymentStatus, SignupRow } from "@/types/domain";
 
 type PaymentFilter = "all" | "paid" | "pending" | "refund" | "canceled";
 const ALERT_AUTO_DISMISS_MS = 5000;
@@ -302,13 +303,17 @@ function hostGmailFlash(gmailParam: string | null): { tone: "ok" | "warn" | "neu
 }
 
 export function HostDashboardClient({
-  games,
+  activeGames,
+  pastDropinGames,
   signupsByGameId,
   hostGmailConnected,
+  organizations,
 }: {
-  games: GameRow[];
+  activeGames: GameRow[];
+  pastDropinGames: GameRow[];
   signupsByGameId: Record<string, SignupRow[]>;
   hostGmailConnected: boolean;
+  organizations: OrganizationRow[];
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -336,17 +341,43 @@ export function HostDashboardClient({
   const [reportDetails, setReportDetails] = useState("");
   const [reportError, setReportError] = useState<string | null>(null);
   const [reportPending, startReportTransition] = useTransition();
+  const [pastGamesModalOpen, setPastGamesModalOpen] = useState(false);
+
+  const mergedGames = useMemo(
+    () => [...activeGames, ...pastDropinGames],
+    [activeGames, pastDropinGames]
+  );
+
+  const pastDropinsSorted = useMemo(
+    () => [...pastDropinGames].sort((a, b) => Date.parse(b.starts_at) - Date.parse(a.starts_at)),
+    [pastDropinGames]
+  );
 
   const selectedGameId = useMemo(() => {
-    if (!games.length) return "";
-    if (pickedGameId && games.some((g) => g.id === pickedGameId)) return pickedGameId;
-    return games[0].id;
-  }, [games, pickedGameId]);
+    if (mergedGames.length === 0) return "";
+    if (pickedGameId && mergedGames.some((g) => g.id === pickedGameId)) return pickedGameId;
+    if (activeGames.length > 0) return activeGames[0].id;
+    return pastDropinsSorted[0]!.id;
+  }, [mergedGames, activeGames, pastDropinsSorted, pickedGameId]);
 
   const selectedGame = useMemo(
-    () => games.find((game) => game.id === selectedGameId) ?? games[0],
-    [games, selectedGameId]
+    () => mergedGames.find((game) => game.id === selectedGameId) ?? mergedGames[0],
+    [mergedGames, selectedGameId]
   );
+
+  const gameSelectOptions = useMemo(() => {
+    if (activeGames.length === 0) return pastDropinsSorted;
+    const list = [...activeGames];
+    const sel = mergedGames.find((g) => g.id === selectedGameId);
+    if (
+      sel &&
+      !list.some((g) => g.id === sel.id) &&
+      pastDropinGames.some((g) => g.id === sel.id)
+    ) {
+      list.push(sel);
+    }
+    return list;
+  }, [activeGames, mergedGames, pastDropinGames, pastDropinsSorted, selectedGameId]);
 
   useEffect(() => {
     if (selectedGame) {
@@ -443,12 +474,6 @@ export function HostDashboardClient({
     setRosterRowsVisible(10);
   }, [selectedGameId, filter]);
 
-  const amountPerPlayer = selectedGame ? Math.max(1, Math.round(selectedGame.price_cents / 100)) : 0;
-  const collected = totals.paid * amountPerPlayer;
-  const pendingPaymentCount = totals.pending;
-  const outstandingEstimate = pendingPaymentCount * amountPerPlayer;
-  const expected = rosterActiveRows.length * amountPerPlayer;
-
   function requestPaymentStatus(player: SignupRow, paymentStatus: SignupPaymentStatus): void {
     if (!selectedGameId || rosterSavingSignupId) return;
     setHostRosterError(null);
@@ -470,11 +495,6 @@ export function HostDashboardClient({
         setRosterSavingSignupId(null);
       }
     });
-  }
-
-  function copyReminderMessage(): void {
-    const msg = `Hey! Quick reminder for ${selectedGame?.title ?? "the run"}. Send $${amountPerPlayer} to ${selectedGame?.host_email ?? ""} and include your reference code.`;
-    void navigator.clipboard?.writeText(msg);
   }
 
   function openAddPlayerModal(): void {
@@ -635,36 +655,7 @@ export function HostDashboardClient({
     });
   }
 
-  function exportCsv(): void {
-    const header = [
-      "name",
-      "email",
-      "organization",
-      "payment_code",
-      "payment_status",
-      "roster_status",
-      "created_at",
-    ];
-    const lines = [
-      header.join(","),
-      ...rosterActiveRows.map((r) => {
-        const orgName =
-          (Array.isArray(r.organizations) ? r.organizations[0] : r.organizations)?.name ?? "";
-        return [r.player_name, r.player_email, orgName, r.payment_code, r.payment_status, r.status, r.created_at]
-          .map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
-          .join(",");
-      }),
-    ];
-    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `roster-${selectedGame?.id ?? "export"}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  if (!games.length) {
+  if (!mergedGames.length) {
     return (
       <section className="host-dashboard-main host-dashboard-empty">
         {gmailFlash ? (
@@ -707,16 +698,45 @@ export function HostDashboardClient({
               value={selectedGameId}
               onChange={(event) => setPickedGameId(event.target.value)}
             >
-              {games.map((game) => (
-                <option key={game.id} value={game.id}>
-                  {game.title}
-                </option>
-              ))}
+              {gameSelectOptions.map((game) => {
+                const isPastOnlyRow =
+                  activeGames.length > 0 && pastDropinGames.some((g) => g.id === game.id);
+                return (
+                  <option key={game.id} value={game.id}>
+                    {isPastOnlyRow ? `Past · ${game.title}` : game.title}
+                  </option>
+                );
+              })}
             </select>
+            {pastDropinGames.length > 0 ? (
+              <button
+                type="button"
+                className="btn sm ghost"
+                style={{ height: 44, minHeight: 44, flexShrink: 0 }}
+                onClick={() => setPastGamesModalOpen(true)}
+              >
+                Past games
+              </button>
+            ) : null}
             <Link href="/host/new" className="btn lg accent host-dashboard-hero-cta" style={{ height: 56, minHeight: 56 }}>
               Host a new game
             </Link>
           </div>
+          {activeGames.length === 0 && pastDropinGames.length > 0 ? (
+            <p
+              className="mono"
+              style={{
+                margin: "12px 0 0",
+                fontSize: 12,
+                letterSpacing: ".04em",
+                color: "rgba(251,248,241,.72)",
+                maxWidth: 560,
+                lineHeight: 1.45,
+              }}
+            >
+              All upcoming sessions have ended. Open Past games to switch sessions, or use the menu above.
+            </p>
+          ) : null}
           {selectedGame ? (
             <div className="mono host-dashboard-hero-organizer" style={{ fontSize: 11, letterSpacing: ".06em", color: "rgba(251,248,241,.65)" }}>
               Presenting organizer · {gameOrganizationDisplayName(selectedGame)}
@@ -1038,6 +1058,9 @@ export function HostDashboardClient({
           ) : null}
           </div>
           <div style={{ display: "grid", gap: 14 }}>
+            {selectedGame ? (
+              <HostGameDetailsCard key={selectedGame.id} game={selectedGame} organizations={organizations} />
+            ) : null}
             <HostPayoutAndGmailCard
               hostGmailConnected={hostGmailConnected}
               variant="with-games"
@@ -1047,46 +1070,80 @@ export function HostDashboardClient({
               interacError={interacError}
               onSaveInterac={saveInteracEmail}
             />
-            <div className="card" style={{ padding: 16 }}>
-              <div className="label">Auto-reminder template</div>
-              <p style={{ margin: "4px 0 14px", fontSize: 14, lineHeight: 1.55, color: "var(--ink-2)" }}>
-                Friendly nudge for players who still owe payment before game time.
-              </p>
-              <div className="card" style={{ padding: 12, boxShadow: "none", background: "var(--bg)" }}>
-                <div className="mono" style={{ fontSize: 10.5, letterSpacing: ".08em", lineHeight: 1.5 }}>
-                  Hey! Quick reminder for {selectedGame?.title ?? "the run"}. Send ${amountPerPlayer} to {selectedGame?.host_email ?? ""}{" "}
-                  and include your reference code.
-                </div>
+          </div>
+        </div>
+        {pastGamesModalOpen ? (
+          <div
+            role="dialog"
+            className="motion-fade-in"
+            aria-modal
+            aria-label="Past games"
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(17,17,20,.55)",
+              zIndex: 60,
+              display: "grid",
+              placeItems: "center",
+              padding: 18,
+            }}
+            onClick={() => setPastGamesModalOpen(false)}
+          >
+            <div
+              className="card motion-sheet-panel"
+              style={{ width: "min(520px, 100%)", padding: 18 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="label" style={{ marginBottom: 8 }}>
+                Host dashboard
               </div>
-              <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
-                <button type="button" className="btn sm ghost" onClick={copyReminderMessage}>
-                  Copy message
+              <h3 className="display" style={{ fontSize: "clamp(22px, 4vw, 32px)", margin: "0 0 14px" }}>
+                Past games
+              </h3>
+              <div
+                style={{
+                  display: "grid",
+                  gap: 8,
+                  maxHeight: "min(52vh, 360px)",
+                  overflowY: "auto",
+                }}
+              >
+                {pastDropinsSorted.map((game) => (
+                  <button
+                    key={game.id}
+                    type="button"
+                    className="btn sm ghost"
+                    onClick={() => {
+                      setPickedGameId(game.id);
+                      setPastGamesModalOpen(false);
+                    }}
+                    style={{
+                      justifyContent: "space-between",
+                      textAlign: "left",
+                      width: "100%",
+                      alignItems: "center",
+                      gap: 12,
+                    }}
+                  >
+                    <span style={{ fontWeight: 700, overflowWrap: "anywhere" }}>{game.title}</span>
+                    <span className="mono" style={{ fontSize: 11, flexShrink: 0, letterSpacing: ".04em" }}>
+                      {new Date(game.starts_at).toLocaleDateString("en-CA", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <div style={{ marginTop: 14, display: "flex", justifyContent: "flex-end" }}>
+                <button type="button" className="btn sm ghost" onClick={() => setPastGamesModalOpen(false)}>
+                  Close
                 </button>
               </div>
             </div>
-            <div className="card" style={{ padding: 16 }}>
-              <div className="label">This game&apos;s intake</div>
-              <div style={{ display: "grid", gap: 10 }}>
-                {[
-                  ["Paid", `$${collected}`],
-                  ["Expected", `$${expected}`],
-                  ["Outstanding (est.)", `$${outstandingEstimate}`],
-                  ["Waitlist", `${selectedGame?.waitlist_count ?? 0} players`],
-                ].map(([label, value]) => (
-                  <div key={label} className="host-dashboard-intake-row" style={{ borderBottom: "1px dashed var(--ink-3)", paddingBottom: 8 }}>
-                    <span className="mono" style={{ fontSize: 11, letterSpacing: ".08em", color: "var(--ink-3)" }}>
-                      {label}
-                    </span>
-                    <span style={{ fontWeight: 800, fontSize: 14 }}>{value}</span>
-                  </div>
-                ))}
-              </div>
-              <button type="button" className="btn sm ghost" style={{ marginTop: 12 }} onClick={exportCsv} disabled={rosterActiveRows.length === 0}>
-                Export CSV
-              </button>
-            </div>
           </div>
-        </div>
+        ) : null}
         {addPlayerOpen ? (
           <div
             role="dialog"

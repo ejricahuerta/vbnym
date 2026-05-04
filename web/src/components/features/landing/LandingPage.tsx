@@ -8,6 +8,7 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SeoJsonLd } from "@/components/shared/SeoJsonLd";
 import { DayStamp, KindBadge, SkillDots } from "@/components/shared/UiPrimitives";
+import { includeGameInPublicLiveList } from "@/lib/dropin-session";
 import { COMING_SOON_LABEL, isGameKindComingSoon } from "@/lib/game-kind-availability";
 import { DEFAULT_ORGANIZATION_ID, DEFAULT_ORGANIZATION_NAME } from "@/lib/organization-default";
 import { buildBreadcrumbSchema, buildOrganizationSchema, buildWebsiteSchema } from "@/lib/seo-schema";
@@ -340,7 +341,9 @@ function WeekPreviewCard({ game }: { game: GameRow }) {
 }
 
 export async function LandingPage() {
-  const [games, facilities] = await Promise.all([listLiveGames(), getFacilitySpotlights()]);
+  const nowMs = Date.now();
+  const [liveGames, facilities] = await Promise.all([listLiveGames(), getFacilitySpotlights()]);
+  const games = liveGames.filter((game) => includeGameInPublicLiveList(game, nowMs));
   const heroGame = games[0];
   const ticketGame = heroGame ?? LANDING_DUMMY_HERO_TICKET;
   const spotsLeftTicket = Math.max(ticketGame.capacity - ticketGame.signed_count, 0);

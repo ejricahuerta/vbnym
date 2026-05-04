@@ -1,12 +1,14 @@
 import type { MetadataRoute } from "next";
 
+import { includeGameInPublicLiveList } from "@/lib/dropin-session";
 import { buildCanonical } from "@/lib/seo";
 import { listLiveGames } from "@/server/queries/games";
 
 const STATIC_PUBLIC_ROUTES = ["/", "/browse", "/privacy", "/terms", "/player-policies"] as const;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const games = await listLiveGames();
+  const nowMs = Date.now();
+  const games = (await listLiveGames()).filter((game) => includeGameInPublicLiveList(game, nowMs));
   const staticEntries: MetadataRoute.Sitemap = STATIC_PUBLIC_ROUTES.map((route) => ({
     url: buildCanonical(route),
     changeFrequency: route === "/" ? "daily" : "weekly",

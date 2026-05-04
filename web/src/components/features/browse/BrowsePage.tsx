@@ -2,11 +2,13 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { BrowseClient } from "@/components/features/browse/BrowseClient";
 import { SeoJsonLd } from "@/components/shared/SeoJsonLd";
+import { includeGameInPublicLiveList } from "@/lib/dropin-session";
 import { buildBreadcrumbSchema } from "@/lib/seo-schema";
 import { getSignupsGroupedByGameId, listLiveGames } from "@/server/queries/games";
 
 export async function BrowsePage() {
-  const games = await listLiveGames();
+  const nowMs = Date.now();
+  const games = (await listLiveGames()).filter((game) => includeGameInPublicLiveList(game, nowMs));
   const signupsByGameId = await getSignupsGroupedByGameId(games.map((game) => game.id));
   const schemaData = buildBreadcrumbSchema([
     { name: "Home", path: "/" },
