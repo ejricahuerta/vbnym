@@ -33,6 +33,7 @@ export async function signupForGame(
       .from("games")
       .select("id, title, starts_at, capacity, signed_count, waitlist_count, host_name, host_email, price_cents, organizations ( name )")
       .eq("id", parsed.data.gameId)
+      .eq("status", "live")
       .maybeSingle<{
         id: string;
         title: string;

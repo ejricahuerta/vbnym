@@ -21,11 +21,13 @@ export async function HostDashboardPage(): Promise<ReactElement> {
 
   const games = await listLiveGamesForHost(hostSessionEmail);
   const nowMs = Date.now();
-  const activeGames = games.filter((game) => includeGameInPublicLiveList(game, nowMs));
-  const pastDropinGames = games.filter(
+  const liveGames = games.filter((g) => g.status === "live");
+  const cancelledGames = games.filter((g) => g.status === "cancelled");
+  const activeGames = liveGames.filter((game) => includeGameInPublicLiveList(game, nowMs));
+  const pastDropinGames = liveGames.filter(
     (game) => game.kind === "dropin" && !includeGameInPublicLiveList(game, nowMs)
   );
-  const gameIds = [...activeGames, ...pastDropinGames].map((g) => g.id);
+  const gameIds = [...activeGames, ...pastDropinGames, ...cancelledGames].map((g) => g.id);
   const [signupsByGameId, hostGmailConnected, organizations] = await Promise.all([
     getSignupsGroupedByGameId(gameIds, { includeAllPaymentStatuses: true }),
     isHostGmailConnected(hostSessionEmail),
@@ -40,6 +42,7 @@ export async function HostDashboardPage(): Promise<ReactElement> {
           <HostDashboardClient
             activeGames={activeGames}
             pastDropinGames={pastDropinGames}
+            cancelledGames={cancelledGames}
             signupsByGameId={signupsByGameId}
             hostGmailConnected={hostGmailConnected}
             organizations={organizations}

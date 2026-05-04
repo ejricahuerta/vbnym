@@ -53,6 +53,12 @@ export const hostLiveGameUpdateSchema = z.object({
 
 export type HostLiveGameUpdateInput = z.infer<typeof hostLiveGameUpdateSchema>;
 
+export const hostCancelLiveGameSchema = z.object({
+  gameId: z.string().uuid(),
+});
+
+export type HostCancelLiveGameInput = z.infer<typeof hostCancelLiveGameSchema>;
+
 function f(fd: FormData, key: string): string {
   const value = fd.get(key);
   return typeof value === "string" ? value : "";
@@ -110,6 +116,16 @@ export function parseHostLiveGameUpdateFormData(formData: FormData): ActionResul
   });
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid game details." };
+  }
+  return { ok: true, data: parsed.data };
+}
+
+export function parseHostCancelLiveGameFormData(formData: FormData): ActionResult<HostCancelLiveGameInput> {
+  const parsed = hostCancelLiveGameSchema.safeParse({
+    gameId: f(formData, "gameId"),
+  });
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid cancel request." };
   }
   return { ok: true, data: parsed.data };
 }

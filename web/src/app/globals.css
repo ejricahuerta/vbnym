@@ -1677,18 +1677,54 @@ details.host-roster-more > summary::-webkit-details-marker {
 .host-dashboard-hero-actions {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  /* Top-align with the game select: centering would sink the CTAs vs. the picker column (select + Past games link). */
+  align-items: flex-start;
   gap: 12px;
   min-width: 0;
   width: 100%;
 }
 
-.host-dashboard-hero-actions .host-dashboard-game-select.input.xl.browse-roster-game-select {
+.host-dashboard-hero-game-picker {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
   flex: 1 1 200px;
   min-width: 0;
   width: auto;
   max-width: 100%;
   box-sizing: border-box;
+}
+
+.host-dashboard-hero-game-picker .host-dashboard-game-select.input.xl.browse-roster-game-select {
+  width: 100%;
+  align-self: stretch;
+}
+
+.host-dashboard-past-games-link {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: var(--ui);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-align: left;
+}
+
+.host-dashboard-past-games-link:hover {
+  color: var(--paper);
+}
+
+.host-dashboard-past-games-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 2px;
 }
 
 .host-dashboard-hero-actions .host-dashboard-hero-cta.btn {
@@ -1718,7 +1754,7 @@ select.host-dashboard-game-select.input.xl.browse-roster-game-select {
     gap: 10px;
   }
 
-  .host-dashboard-hero-actions .host-dashboard-game-select.input.xl.browse-roster-game-select {
+  .host-dashboard-hero-actions .host-dashboard-hero-game-picker {
     flex: none;
     width: 100%;
     max-width: 100%;
