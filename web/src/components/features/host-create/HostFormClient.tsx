@@ -5,6 +5,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { KindBadge } from "@/components/shared/UiPrimitives";
+import { buildStartsAtIso } from "@/lib/host-datetime";
 import { COMING_SOON_LABEL, isGameKindComingSoon } from "@/lib/game-kind-availability";
 import { DEFAULT_ORGANIZATION_ID } from "@/lib/organization-default";
 import { publishHostGame } from "@/server/actions/host";
@@ -143,12 +144,6 @@ function IcoUserPlus({ size = 18 }: { size?: number }) {
       <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM20 8v6M23 11h-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
-}
-
-function buildStartsAtIso(dateStr: string, timeStr: string): string {
-  if (!dateStr || !timeStr) return "";
-  const d = new Date(`${dateStr}T${timeStr}`);
-  return Number.isNaN(d.getTime()) ? "" : d.toISOString();
 }
 
 function formatHostPublishError(message: string): string {

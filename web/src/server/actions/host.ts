@@ -11,6 +11,7 @@ import { sendTransactionalEmailResult } from "@/lib/send-email";
 import { createServerSupabase } from "@/lib/supabase-server";
 import {
   parseHostInteracEmailFormData,
+  parseHostLiveGameUpdateFormData,
   parseHostPublishFormData,
 } from "@/types/schemas/host";
 import type { ActionResult } from "@/types/action-result";
@@ -135,6 +136,76 @@ export async function updateHostInteracEmail(formData: FormData): Promise<Action
       html: template.html,
       text: template.text,
     });
+  }
+
+  revalidatePath("/browse");
+  revalidatePath("/host");
+  revalidatePath(`/games/${parsed.data.gameId}`);
+  revalidatePath("/admin");
+  return { ok: true, data: null };
+}
+
+export async function updateHostLiveGameDetails(formData: FormData): Promise<ActionResult<null>> {
+  const parsed = parseHostLiveGameUpdateFormData(formData);
+  if (!parsed.ok) return parsed;
+
+  const sessionEmail = await getHostSessionEmail();
+  if (!sessionEmail) {
+    return { ok: false, error: "Sign in as host to update game details." };
+  }
+
+  const supabase = createServerSupabase();
+  const normalizedSession = sessionEmail.trim().toLowerCase();
+
+  const { data: orgExists } = await supabase
+    .from("organizations")
+    .select("id")
+    .eq("id", parsed.data.organizationId)
+    .maybeSingle<{ id: string }>();
+  if (!orgExists) {
+    return { ok: false, error: "Pick a valid organization." };
+  }
+
+  const { data: row, error: fetchError } = await supabase
+    .from("games")
+    .select("id, owner_email, signed_count")
+    .eq("id", parsed.data.gameId)
+    .maybeSingle<{ id: string; owner_email: string; signed_count: number }>();
+
+  if (fetchError || !row) {
+    return { ok: false, error: "Game not found." };
+  }
+
+  if (row.owner_email.trim().toLowerCase() !== normalizedSession) {
+    return { ok: false, error: "You can only update games you host." };
+  }
+
+  if (parsed.data.capacity < row.signed_count) {
+    return {
+      ok: false,
+      error: `Capacity must be at least ${row.signed_count} (current roster size).`,
+    };
+  }
+
+  const { error: updateError } = await supabase
+    .from("games")
+    .update({
+      title: parsed.data.title,
+      venue_name: parsed.data.venueName,
+      venue_area: parsed.data.venueArea?.trim() || null,
+      starts_at: parsed.data.startsAt,
+      duration_minutes: parsed.data.durationMinutes,
+      skill_level: parsed.data.skillLevel,
+      capacity: parsed.data.capacity,
+      price_cents: parsed.data.priceCents,
+      host_name: parsed.data.hostName,
+      organization_id: parsed.data.organizationId,
+      notes: parsed.data.format,
+    })
+    .eq("id", parsed.data.gameId);
+
+  if (updateError) {
+    return { ok: false, error: updateError.message ?? "Could not update game details." };
   }
 
   revalidatePath("/browse");
