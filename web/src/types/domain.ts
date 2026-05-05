@@ -26,6 +26,8 @@ export type GameRow = {
   price_cents: number;
   host_name: string;
   host_email: string;
+  /** E.164 digits only (no +), for wa.me; null if unset. */
+  host_whatsapp_e164: string | null;
   owner_email: string;
   organization_id: string;
   /** Supabase FK embed is usually an object; some clients surface a one-element array. */

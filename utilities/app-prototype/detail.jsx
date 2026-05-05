@@ -43,13 +43,6 @@ function Detail({ eventId, onNav, onSignup, signedUp }) {
           <div>
             <div className="label">Format</div>
             <p style={{ fontSize: 16, lineHeight: 1.6, margin: '0 0 24px', maxWidth: 680 }}>{ev.format}. Show up 10 minutes early. Captains pick balanced teams. We rotate every 25 minutes.</p>
-            <div className="label">What to bring</div>
-            <ul style={{ paddingLeft: 18, fontSize: 14, color: 'var(--ink-2)', lineHeight: 1.7, margin: '0 0 24px' }}>
-              <li>Indoor court shoes (non-marking)</li>
-              <li>Water fountain on site</li>
-              <li>Knee pads if you've got them</li>
-              <li>A light + dark shirt for team mixing</li>
-            </ul>
             <div className="label">Your host</div>
             <div className="card" style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
               <div style={{ width: 54, height: 54, borderRadius: '50%', background: 'var(--accent)', border: '2px solid var(--ink)', display: 'grid', placeItems: 'center', fontWeight: 900, fontSize: 18, fontFamily: 'var(--display)' }}>

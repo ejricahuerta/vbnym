@@ -327,6 +327,7 @@ export function HostFormClient({
     format: "Co-ed 6s",
     hostName: "",
     hostEmail: hostSessionEmail ?? "",
+    hostWhatsapp: "",
   }));
   const [error, setError] = useState<string | null>(null);
   const [depositConfirmed, setDepositConfirmed] = useState(true);
@@ -369,6 +370,7 @@ export function HostFormClient({
     fd.set("format", formatNotes);
     fd.set("hostName", form.hostName);
     fd.set("hostEmail", form.hostEmail);
+    fd.set("hostWhatsapp", form.hostWhatsapp);
     fd.set("organizationId", organizationId);
 
     setError(null);
@@ -790,6 +792,24 @@ export function HostFormClient({
                   Signed in as {hostSessionEmail}
                 </div>
               ) : null}
+            </div>
+            <div className="field">
+              <label className="label">WhatsApp for player messages (optional)</label>
+              <input
+                className="input"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                value={form.hostWhatsapp}
+                onChange={(e) => upd("hostWhatsapp", e.target.value)}
+                placeholder="e.g. 14165551234 or (416) 555-1234"
+              />
+              <div
+                className="mono"
+                style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 6, fontWeight: 600, letterSpacing: ".04em", lineHeight: 1.45 }}
+              >
+                If set, the Message button on your game page opens WhatsApp with a short prefilled note. Leave blank to use email instead.
+              </div>
             </div>
 
             <label className="host-payment-checkbox">

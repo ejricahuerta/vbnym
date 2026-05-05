@@ -1,6 +1,8 @@
 export type ApprovedHostRow = {
   email: string;
   created_at: string;
+  display_name: string | null;
+  phone_e164: string | null;
 };
 
 export type HostAccessRequestContextGame = {

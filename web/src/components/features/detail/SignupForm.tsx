@@ -4,6 +4,7 @@ import type { ReactElement } from "react";
 import { useState, useTransition } from "react";
 
 import { signupForGame } from "@/server/actions/signup";
+import { MAX_WAITLIST_PLAYER_SLOTS } from "@/lib/registration-policy";
 import type { GameKind } from "@/types/domain";
 
 type SignupStep = "intro" | "form" | "interac" | "sent";
@@ -42,6 +43,7 @@ export function SignupForm({
   gameId,
   priceCents,
   signedCount,
+  waitlistCount,
   capacity,
   hostName,
   hostEmail,
@@ -55,6 +57,7 @@ export function SignupForm({
   gameId: string;
   priceCents: number;
   signedCount: number;
+  waitlistCount: number;
   capacity: number;
   hostName: string;
   hostEmail: string;
@@ -84,14 +87,27 @@ export function SignupForm({
   const [copied, setCopied] = useState("");
 
   const spotsLeft = Math.max(capacity - signedCount, 0);
+  const gameIsFull = spotsLeft <= 0;
+  const waitlistSlotsRemaining = gameIsFull
+    ? Math.max(0, MAX_WAITLIST_PLAYER_SLOTS - waitlistCount)
+    : MAX_WAITLIST_PLAYER_SLOTS;
+  const maxTotalPlayersSignup = gameIsFull ? waitlistSlotsRemaining : MAX_WAITLIST_PLAYER_SLOTS;
+  const waitlistIsFull = gameIsFull && waitlistSlotsRemaining <= 0;
   const priceWhole = Math.floor(priceCents / 100);
-  const maxAdditionalPlayers = includeSigner ? 5 : 6;
+  const maxAdditionalPlayers = gameIsFull
+    ? includeSigner
+      ? Math.max(0, Math.min(5, maxTotalPlayersSignup - 1))
+      : Math.max(0, Math.min(MAX_WAITLIST_PLAYER_SLOTS, maxTotalPlayersSignup))
+    : includeSigner
+      ? 5
+      : 6;
   const trimmedPlayers = players.map((name) => name.trim()).filter(Boolean);
   const playerCount = !groupSignupOpen
     ? 1
     : includeSigner
       ? trimmedPlayers.length + 1
       : trimmedPlayers.length;
+  const groupExceedsWaitlistCap = gameIsFull && groupSignupOpen && playerCount > maxTotalPlayersSignup;
   const totalAmountCents = priceCents * Math.max(playerCount, 1);
   const totalWhole = Math.floor(totalAmountCents / 100);
   const pctFill = capacity > 0 ? Math.min(100, (signedCount / capacity) * 100) : 0;
@@ -128,8 +144,13 @@ export function SignupForm({
     });
   }
 
-  const introLabel =
-    spotsLeft <= 0 ? "Join wait-list" : kind === "dropin" ? "Sign me up" : "Register team";
+  const introLabel = waitlistIsFull
+    ? "Waitlist full"
+    : gameIsFull
+      ? "Join Waitlist"
+      : kind === "dropin"
+        ? "Sign me up"
+        : "Register team";
 
   if (step === "sent" && paymentCode) {
     return (
@@ -468,6 +489,12 @@ export function SignupForm({
               {playerCount} player{playerCount === 1 ? "" : "s"} × ${priceWhole} each = ${totalWhole}
             </div>
           </div>
+          {groupExceedsWaitlistCap ? (
+            <p style={{ margin: 0, color: "var(--warn)", fontSize: 13 }}>
+              This signup has more players than waitlist spots left ({waitlistSlotsRemaining} of {MAX_WAITLIST_PLAYER_SLOTS}{" "}
+              max on the waitlist). Remove players or sign up solo.
+            </p>
+          ) : null}
           {err ? (
             <p style={{ margin: 0, color: "var(--warn)", fontSize: 13 }}>{err}</p>
           ) : null}
@@ -479,7 +506,8 @@ export function SignupForm({
               pending ||
               !addedByName.trim() ||
               !addedByEmail.trim() ||
-              (groupSignupOpen && !includeSigner && trimmedPlayers.length === 0)
+              (groupSignupOpen && !includeSigner && trimmedPlayers.length === 0) ||
+              groupExceedsWaitlistCap
             }
             style={{
               width: "100%",
@@ -536,10 +564,10 @@ export function SignupForm({
             className="mono"
             style={{ fontSize: 10, letterSpacing: ".14em", color: "rgba(251,248,241,.5)", fontWeight: 700 }}
           >
-            SPOTS LEFT
+            {gameIsFull ? "ON WAITLIST" : "SPOTS LEFT"}
           </div>
           <div className="display" style={{ fontSize: 38, lineHeight: 1 }}>
-            {spotsLeft}
+            {gameIsFull ? waitlistCount : spotsLeft}
           </div>
         </div>
         {onHeaderClose ? (
@@ -576,8 +604,20 @@ export function SignupForm({
         >
           <div style={{ height: "100%", width: `${pctFill}%`, background: "var(--accent)" }} />
         </div>
-        <button type="button" onClick={() => setStep("form")} className="btn lg accent" style={{ width: "100%" }}>
-          {introLabel} →
+        {gameIsFull ? (
+          <div className="mono" style={{ fontSize: 11, textAlign: "center", color: "var(--ink-2)", marginBottom: 12, letterSpacing: ".06em" }}>
+            {waitlistCount} waitlisted player{waitlistCount === 1 ? "" : "s"} (max {MAX_WAITLIST_PLAYER_SLOTS})
+          </div>
+        ) : null}
+        <button
+          type="button"
+          onClick={() => setStep("form")}
+          className="btn lg accent"
+          style={{ width: "100%" }}
+          disabled={waitlistIsFull}
+        >
+          {introLabel}
+          {!waitlistIsFull ? " →" : ""}
         </button>
         <div className="mono" style={{ fontSize: 10, textAlign: "center", marginTop: 10, color: "var(--ink-3)", letterSpacing: ".12em" }}>
           Solo price shown · add a group on the next step if you need more than one player

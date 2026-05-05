@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { signupForGame } from "@/server/actions/signup";
-import { getHostSessionEmail } from "@/lib/auth";
+import { getHostSessionEmail, resolveHostedGameManagement } from "@/lib/auth";
 import { buildGmailConnectForPaymentSyncEmailTemplate } from "@/lib/email-templates";
 import { isGameKindComingSoon } from "@/lib/game-kind-availability";
 import { appOrigin } from "@/lib/env";
@@ -59,6 +59,7 @@ export async function publishHostGame(formData: FormData): Promise<ActionResult<
       price_cents: parsed.data.priceCents,
       host_name: parsed.data.hostName,
       host_email: parsed.data.hostEmail.trim(),
+      host_whatsapp_e164: parsed.data.hostWhatsappE164,
       owner_email: sessionEmail,
       organization_id: parsed.data.organizationId,
       notes: parsed.data.format,
@@ -94,13 +95,12 @@ export async function updateHostInteracEmail(formData: FormData): Promise<Action
   const parsed = parseHostInteracEmailFormData(formData);
   if (!parsed.ok) return parsed;
 
-  const sessionEmail = await getHostSessionEmail();
-  if (!sessionEmail) {
-    return { ok: false, error: "Sign in as host to update payment details." };
+  const auth = await resolveHostedGameManagement();
+  if (!auth.ok) {
+    return { ok: false, error: auth.error };
   }
 
   const supabase = createServerSupabase();
-  const normalizedSession = sessionEmail.trim().toLowerCase();
   const { data: row, error: fetchError } = await supabase
     .from("games")
     .select("id, owner_email, host_email, status")
@@ -111,7 +111,10 @@ export async function updateHostInteracEmail(formData: FormData): Promise<Action
     return { ok: false, error: "Game not found." };
   }
 
-  if (row.owner_email.trim().toLowerCase() !== normalizedSession) {
+  const isGameOwner =
+    auth.hostSessionEmail != null &&
+    row.owner_email.trim().toLowerCase() === auth.hostSessionEmail.trim().toLowerCase();
+  if (!auth.isAdmin && !isGameOwner) {
     return { ok: false, error: "You can only update games you host." };
   }
 
@@ -135,8 +138,10 @@ export async function updateHostInteracEmail(formData: FormData): Promise<Action
       reconnectUrl: `${appOrigin()}/api/gmail/host/oauth/start`,
       reason: "payment_email_update",
     });
+    const notifyEmail =
+      isGameOwner && auth.hostSessionEmail ? auth.hostSessionEmail : row.owner_email.trim();
     await sendTransactionalEmailResult({
-      to: sessionEmail,
+      to: notifyEmail,
       subject: template.subject,
       html: template.html,
       text: template.text,
@@ -154,13 +159,12 @@ export async function updateHostLiveGameDetails(formData: FormData): Promise<Act
   const parsed = parseHostLiveGameUpdateFormData(formData);
   if (!parsed.ok) return parsed;
 
-  const sessionEmail = await getHostSessionEmail();
-  if (!sessionEmail) {
-    return { ok: false, error: "Sign in as host to update game details." };
+  const auth = await resolveHostedGameManagement();
+  if (!auth.ok) {
+    return { ok: false, error: auth.error };
   }
 
   const supabase = createServerSupabase();
-  const normalizedSession = sessionEmail.trim().toLowerCase();
 
   const { data: orgExists } = await supabase
     .from("organizations")
@@ -181,7 +185,10 @@ export async function updateHostLiveGameDetails(formData: FormData): Promise<Act
     return { ok: false, error: "Game not found." };
   }
 
-  if (row.owner_email.trim().toLowerCase() !== normalizedSession) {
+  const isGameOwner =
+    auth.hostSessionEmail != null &&
+    row.owner_email.trim().toLowerCase() === auth.hostSessionEmail.trim().toLowerCase();
+  if (!auth.isAdmin && !isGameOwner) {
     return { ok: false, error: "You can only update games you host." };
   }
 
@@ -208,6 +215,7 @@ export async function updateHostLiveGameDetails(formData: FormData): Promise<Act
       capacity: parsed.data.capacity,
       price_cents: parsed.data.priceCents,
       host_name: parsed.data.hostName,
+      host_whatsapp_e164: parsed.data.hostWhatsappE164,
       organization_id: parsed.data.organizationId,
       notes: parsed.data.format,
     })
@@ -228,13 +236,12 @@ export async function cancelHostLiveGame(formData: FormData): Promise<ActionResu
   const parsed = parseHostCancelLiveGameFormData(formData);
   if (!parsed.ok) return parsed;
 
-  const sessionEmail = await getHostSessionEmail();
-  if (!sessionEmail) {
-    return { ok: false, error: "Sign in as host to cancel a game." };
+  const auth = await resolveHostedGameManagement();
+  if (!auth.ok) {
+    return { ok: false, error: auth.error };
   }
 
   const supabase = createServerSupabase();
-  const normalizedSession = sessionEmail.trim().toLowerCase();
 
   const { data: row, error: fetchError } = await supabase
     .from("games")
@@ -246,7 +253,10 @@ export async function cancelHostLiveGame(formData: FormData): Promise<ActionResu
     return { ok: false, error: "Game not found." };
   }
 
-  if (row.owner_email.trim().toLowerCase() !== normalizedSession) {
+  const isGameOwner =
+    auth.hostSessionEmail != null &&
+    row.owner_email.trim().toLowerCase() === auth.hostSessionEmail.trim().toLowerCase();
+  if (!auth.isAdmin && !isGameOwner) {
     return { ok: false, error: "You can only cancel games you host." };
   }
 

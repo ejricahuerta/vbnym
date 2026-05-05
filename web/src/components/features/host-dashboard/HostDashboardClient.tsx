@@ -75,10 +75,14 @@ function HostGmailNotice({
 type HostPayoutAndGmailCardProps =
   | {
       hostGmailConnected: boolean;
+      effectiveGmailConnected?: boolean;
+      hostMagicLinkSignedIn: boolean;
       variant: "no-games";
     }
   | {
       hostGmailConnected: boolean;
+      effectiveGmailConnected?: boolean;
+      hostMagicLinkSignedIn: boolean;
       variant: "with-games";
       interacDraft: string;
       onInteracDraftChange: (value: string) => void;
@@ -93,12 +97,22 @@ function HostGmailFooterButtons({
   pending,
   locked,
   onPendingChange,
+  hostMagicLinkSignedIn,
 }: {
   connected: boolean;
   pending: boolean;
   locked: boolean;
   onPendingChange: (next: boolean) => void;
+  hostMagicLinkSignedIn: boolean;
 }) {
+  if (!hostMagicLinkSignedIn) {
+    return (
+      <p className="mono" style={{ margin: 0, fontSize: 11, letterSpacing: ".04em", lineHeight: 1.45, color: "var(--ink-2)" }}>
+        {"Gmail connect and disconnect use the host magic link for this game's organizer."}
+      </p>
+    );
+  }
+
   const disabled = pending || locked;
 
   function beginConnect(): void {
@@ -146,7 +160,7 @@ function HostGmailFooterButtons({
 }
 
 function HostPayoutAndGmailCard(props: HostPayoutAndGmailCardProps) {
-  const connected = props.hostGmailConnected;
+  const connected = props.effectiveGmailConnected ?? props.hostGmailConnected;
   const [gmailPending, setGmailPending] = useState(false);
   const savePending = props.variant === "with-games" ? props.interacPending : false;
 
@@ -262,6 +276,7 @@ function HostPayoutAndGmailCard(props: HostPayoutAndGmailCardProps) {
                   pending={gmailPending}
                   locked={savePending}
                   onPendingChange={setGmailPending}
+                  hostMagicLinkSignedIn={props.hostMagicLinkSignedIn}
                 />
               </div>
             </div>
@@ -274,6 +289,7 @@ function HostPayoutAndGmailCard(props: HostPayoutAndGmailCardProps) {
             pending={gmailPending}
             locked={false}
             onPendingChange={setGmailPending}
+            hostMagicLinkSignedIn={props.hostMagicLinkSignedIn}
           />
         </div>
       )}
@@ -310,6 +326,8 @@ export function HostDashboardClient({
   cancelledGames,
   signupsByGameId,
   hostGmailConnected,
+  gmailConnectedByOwnerEmail,
+  hostMagicLinkSignedIn,
   organizations,
 }: {
   activeGames: GameRow[];
@@ -317,6 +335,8 @@ export function HostDashboardClient({
   cancelledGames: GameRow[];
   signupsByGameId: Record<string, SignupRow[]>;
   hostGmailConnected: boolean;
+  gmailConnectedByOwnerEmail: Record<string, boolean> | null;
+  hostMagicLinkSignedIn: boolean;
   organizations: OrganizationRow[];
 }) {
   const router = useRouter();
@@ -377,6 +397,13 @@ export function HostDashboardClient({
     () => mergedGames.find((game) => game.id === selectedGameId) ?? mergedGames[0],
     [mergedGames, selectedGameId]
   );
+
+  const effectiveGmailConnected = useMemo(() => {
+    if (gmailConnectedByOwnerEmail && selectedGame) {
+      return gmailConnectedByOwnerEmail[selectedGame.owner_email.trim().toLowerCase()] ?? false;
+    }
+    return hostGmailConnected;
+  }, [gmailConnectedByOwnerEmail, hostGmailConnected, selectedGame]);
 
   const gameSelectOptions = useMemo(() => {
     if (activeGames.length === 0) return [...pastDropinsSorted, ...cancelledSorted];
@@ -719,11 +746,18 @@ export function HostDashboardClient({
           <p style={{ margin: "0 0 20px", color: "var(--ink-2)", lineHeight: 1.55, fontSize: 15 }}>
             When you publish a game, it appears here with sign-ups and payment tracking.
           </p>
-          <Link href="/host/new" className="btn accent">
-            Host a new game
-          </Link>
+          {hostMagicLinkSignedIn ? (
+            <Link href="/host/new" className="btn accent">
+              Host a new game
+            </Link>
+          ) : null}
         </div>
-        <HostPayoutAndGmailCard hostGmailConnected={hostGmailConnected} variant="no-games" />
+        <HostPayoutAndGmailCard
+          hostGmailConnected={hostGmailConnected}
+          effectiveGmailConnected={effectiveGmailConnected}
+          hostMagicLinkSignedIn={hostMagicLinkSignedIn}
+          variant="no-games"
+        />
       </section>
     );
   }
@@ -786,9 +820,11 @@ export function HostDashboardClient({
                 Cancel game
               </button>
             ) : null}
-            <Link href="/host/new" className="btn lg accent host-dashboard-hero-cta" style={{ height: 56, minHeight: 56 }}>
-              Host a new game
-            </Link>
+            {hostMagicLinkSignedIn ? (
+              <Link href="/host/new" className="btn lg accent host-dashboard-hero-cta" style={{ height: 56, minHeight: 56 }}>
+                Host a new game
+              </Link>
+            ) : null}
           </div>
           {activeGames.length === 0 && pastDropinGames.length > 0 ? (
             <p
@@ -1136,6 +1172,8 @@ export function HostDashboardClient({
             ) : null}
             <HostPayoutAndGmailCard
               hostGmailConnected={hostGmailConnected}
+              effectiveGmailConnected={effectiveGmailConnected}
+              hostMagicLinkSignedIn={hostMagicLinkSignedIn}
               variant="with-games"
               interacDraft={interacDraft}
               onInteracDraftChange={setInteracDraft}

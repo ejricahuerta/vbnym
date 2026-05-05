@@ -31,6 +31,7 @@ export function HostGameDetailsCard({
   const [priceDollars, setPriceDollars] = useState(String(Math.max(0, Math.round(game.price_cents / 100))));
   const [formatNotes, setFormatNotes] = useState(game.notes ?? "");
   const [hostName, setHostName] = useState(game.host_name);
+  const [hostWhatsapp, setHostWhatsapp] = useState(game.host_whatsapp_e164 ?? "");
   const [organizationId, setOrganizationId] = useState(game.organization_id);
 
   useEffect(() => {
@@ -46,6 +47,7 @@ export function HostGameDetailsCard({
     setPriceDollars(String(Math.max(0, Math.round(game.price_cents / 100))));
     setFormatNotes(game.notes ?? "");
     setHostName(game.host_name);
+    setHostWhatsapp(game.host_whatsapp_e164 ?? "");
     setOrganizationId(game.organization_id);
     setError(null);
   }, [game]);
@@ -76,6 +78,7 @@ export function HostGameDetailsCard({
     fd.set("priceCents", String(Math.round((Number(priceDollars) || 0) * 100)));
     fd.set("format", formatNotes);
     fd.set("hostName", hostName);
+    fd.set("hostWhatsapp", hostWhatsapp);
     fd.set("organizationId", organizationId);
 
     setError(null);
@@ -225,6 +228,24 @@ export function HostGameDetailsCard({
             Host display name
           </span>
           <input className="input" type="text" value={hostName} onChange={(e) => setHostName(e.target.value)} disabled={pending} />
+        </div>
+        <div style={{ display: "grid", gap: 4 }}>
+          <span className="label" style={{ fontSize: 11 }}>
+            WhatsApp for player messages (optional)
+          </span>
+          <input
+            className="input"
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            value={hostWhatsapp}
+            onChange={(e) => setHostWhatsapp(e.target.value)}
+            disabled={pending}
+            placeholder="Digits with country code, or leave blank for email only"
+          />
+          <span className="mono" style={{ fontSize: 10, color: "var(--ink-3)", letterSpacing: ".04em" }}>
+            Message on the public game page opens WhatsApp when this is set.
+          </span>
         </div>
         <div style={{ display: "grid", gap: 4 }}>
           <span className="label" style={{ fontSize: 11 }}>

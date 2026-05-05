@@ -30,10 +30,16 @@ export const listApprovedHosts = cache(async (): Promise<ApprovedHostRow[]> => {
     const supabase = createServerSupabase();
     const { data, error } = await supabase
       .from("approved_hosts")
-      .select("email, created_at")
+      .select("email, created_at, display_name, phone_e164")
       .order("created_at", { ascending: false });
     if (error || !data) return [];
-    return data as ApprovedHostRow[];
+    const rows = data as (ApprovedHostRow & { display_name?: string | null; phone_e164?: string | null })[];
+    return rows.map((r) => ({
+      email: r.email,
+      created_at: r.created_at,
+      display_name: r.display_name ?? null,
+      phone_e164: r.phone_e164 ?? null,
+    }));
   } catch {
     return [];
   }

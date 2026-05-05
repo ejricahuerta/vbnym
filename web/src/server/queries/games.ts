@@ -20,6 +20,7 @@ const GAME_LIST_SELECT = [
   "price_cents",
   "host_name",
   "host_email",
+  "host_whatsapp_e164",
   "owner_email",
   "organization_id",
   "organizations ( name )",
@@ -54,6 +55,21 @@ export const listLiveGames = cache(async (): Promise<GameRow[]> => {
       .from("games")
       .select(GAME_LIST_SELECT)
       .eq("status", "live")
+      .order("starts_at", { ascending: true });
+    return (data ?? []) as unknown as GameRow[];
+  } catch {
+    return [];
+  }
+});
+
+/** Live and cancelled games across all hosts (admin dashboard). */
+export const listLiveGamesForAdmin = cache(async (): Promise<GameRow[]> => {
+  try {
+    const supabase = createServerSupabase();
+    const { data } = await supabase
+      .from("games")
+      .select(GAME_LIST_SELECT)
+      .in("status", ["live", "cancelled"])
       .order("starts_at", { ascending: true });
     return (data ?? []) as unknown as GameRow[];
   } catch {

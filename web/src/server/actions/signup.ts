@@ -5,10 +5,16 @@ import { revalidatePath } from "next/cache";
 
 import {
   buildHostSignupNotificationEmailTemplate,
+  buildHostWaitlistSignupNotificationEmailTemplate,
   buildPlayerSignupPaymentEmailTemplate,
+  buildPlayerWaitlistJoinedEmailTemplate,
 } from "@/lib/email-templates";
 import { hostGmailConnectionId } from "@/lib/host-gmail";
-import { PAYMENT_CODE_EXPIRY_MINUTES } from "@/lib/registration-policy";
+import {
+  MAX_WAITLIST_PLAYER_SLOTS,
+  PAYMENT_CODE_EXPIRY_MINUTES,
+  WAITLIST_INVITE_MINUTES,
+} from "@/lib/registration-policy";
 import { sendTransactionalEmailResult } from "@/lib/send-email";
 import { generatePaymentCode } from "@/lib/payment-code";
 import { DEFAULT_ORGANIZATION_ID, DEFAULT_ORGANIZATION_NAME } from "@/lib/organization-default";
@@ -66,6 +72,12 @@ export async function signupForGame(
   const playerCount = rosterPlayers.length;
   const amountCents = game.price_cents * playerCount;
   const waitlist = game.signed_count >= game.capacity;
+  if (waitlist && game.waitlist_count + playerCount > MAX_WAITLIST_PLAYER_SLOTS) {
+    return {
+      ok: false,
+      error: `The waitlist is full (${MAX_WAITLIST_PLAYER_SLOTS} players max). Try another session or check back if a spot opens.`,
+    };
+  }
   const paymentCode = generatePaymentCode({
     gameId: parsed.data.gameId,
     signupId,
@@ -117,36 +129,66 @@ export async function signupForGame(
     hour: "numeric",
     minute: "2-digit",
   });
-  const playerTemplate = buildPlayerSignupPaymentEmailTemplate({
-    gameTitle: game.title,
-    startsAtDisplay,
-    gameOrganizerName,
-    playerOrganizationName,
-    hostName: game.host_name,
-    hostEmail: game.host_email,
-    playerName: parsed.data.addedByName,
-    paymentCode,
-    amountCents,
-    playerCount,
-    addedByName: parsed.data.addedByName,
-    refundOwnerName: parsed.data.addedByName,
-    deadlineMinutes: PAYMENT_CODE_EXPIRY_MINUTES,
-    manualOnly,
-  });
-  const hostTemplate = buildHostSignupNotificationEmailTemplate({
-    gameTitle: game.title,
-    startsAtDisplay,
-    gameOrganizerName,
-    playerOrganizationName,
-    playerName: parsed.data.addedByName,
-    playerEmail: parsed.data.addedByEmail,
-    paymentCode,
-    amountCents,
-    playerCount,
-    addedByName: parsed.data.addedByName,
-    refundOwnerName: parsed.data.addedByName,
-    manualOnly,
-  });
+  const playerTemplate = waitlist
+    ? buildPlayerWaitlistJoinedEmailTemplate({
+        gameTitle: game.title,
+        startsAtDisplay,
+        gameOrganizerName,
+        playerOrganizationName,
+        hostName: game.host_name,
+        hostEmail: game.host_email,
+        playerName: parsed.data.addedByName,
+        playerCount,
+        addedByName: parsed.data.addedByName,
+        amountCents,
+        paymentCode,
+        waitlistInviteMinutes: WAITLIST_INVITE_MINUTES,
+      })
+    : buildPlayerSignupPaymentEmailTemplate({
+        gameTitle: game.title,
+        startsAtDisplay,
+        gameOrganizerName,
+        playerOrganizationName,
+        hostName: game.host_name,
+        hostEmail: game.host_email,
+        playerName: parsed.data.addedByName,
+        paymentCode,
+        amountCents,
+        playerCount,
+        addedByName: parsed.data.addedByName,
+        refundOwnerName: parsed.data.addedByName,
+        deadlineMinutes: PAYMENT_CODE_EXPIRY_MINUTES,
+        manualOnly,
+      });
+  const hostTemplate = waitlist
+    ? buildHostWaitlistSignupNotificationEmailTemplate({
+        gameTitle: game.title,
+        startsAtDisplay,
+        gameOrganizerName,
+        playerOrganizationName,
+        playerName: parsed.data.addedByName,
+        playerEmail: parsed.data.addedByEmail,
+        paymentCode,
+        amountCents,
+        playerCount,
+        addedByName: parsed.data.addedByName,
+        refundOwnerName: parsed.data.addedByName,
+        manualOnly,
+      })
+    : buildHostSignupNotificationEmailTemplate({
+        gameTitle: game.title,
+        startsAtDisplay,
+        gameOrganizerName,
+        playerOrganizationName,
+        playerName: parsed.data.addedByName,
+        playerEmail: parsed.data.addedByEmail,
+        paymentCode,
+        amountCents,
+        playerCount,
+        addedByName: parsed.data.addedByName,
+        refundOwnerName: parsed.data.addedByName,
+        manualOnly,
+      });
   await Promise.all([
     sendTransactionalEmailResult({
       to: parsed.data.addedByEmail,
