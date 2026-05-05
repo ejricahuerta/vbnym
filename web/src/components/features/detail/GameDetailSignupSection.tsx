@@ -3,8 +3,10 @@
 import type { ReactElement } from "react";
 import { useCallback, useEffect, useState } from "react";
 
+import { useRegisterGameDetailSignupOpener } from "@/components/features/detail/GameDetailSignupOpener";
 import { SignupForm } from "@/components/features/detail/SignupForm";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { MAX_WAITLIST_PLAYER_SLOTS } from "@/lib/registration-policy";
 import type { GameKind } from "@/types/domain";
 
 const DETAIL_WIDE = "(min-width: 920px)";
@@ -14,6 +16,7 @@ export type GameDetailSignupSectionProps = {
   gameId: string;
   priceCents: number;
   signedCount: number;
+  waitlistCount: number;
   capacity: number;
   hostName: string;
   hostEmail: string;
@@ -23,7 +26,18 @@ export type GameDetailSignupSectionProps = {
 };
 
 export function GameDetailSignupSection(props: GameDetailSignupSectionProps): ReactElement {
-  const { gameId, priceCents, signedCount, capacity, hostName, hostEmail, gameTitle, startsAtDisplay, kind } = props;
+  const {
+    gameId,
+    priceCents,
+    signedCount,
+    waitlistCount,
+    capacity,
+    hostName,
+    hostEmail,
+    gameTitle,
+    startsAtDisplay,
+    kind,
+  } = props;
   const [ready, setReady] = useState(false);
   const wide = useMediaQuery(DETAIL_WIDE);
   const [modalRendered, setModalRendered] = useState(false);
@@ -57,8 +71,15 @@ export function GameDetailSignupSection(props: GameDetailSignupSectionProps): Re
   }, [modalEnter, modalRendered]);
 
   const spotsLeft = Math.max(capacity - signedCount, 0);
-  const introLabel =
-    spotsLeft <= 0 ? "Join wait-list" : kind === "dropin" ? "Sign me up" : "Register team";
+  const gameIsFull = spotsLeft <= 0;
+  const waitlistIsFull = gameIsFull && waitlistCount >= MAX_WAITLIST_PLAYER_SLOTS;
+  const dockIntroLabel = waitlistIsFull
+    ? "Waitlist full"
+    : gameIsFull
+      ? "Join Waitlist"
+      : kind === "dropin"
+        ? "Sign me up"
+        : "Register team";
   const priceWhole = Math.floor(priceCents / 100);
 
   useEffect(() => {
@@ -76,11 +97,24 @@ export function GameDetailSignupSection(props: GameDetailSignupSectionProps): Re
     };
   }, [modalRendered, modalEnter, closeModal]);
 
+  const scrollToSignupPanel = useCallback((): void => {
+    document.getElementById("game-detail-signup")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
+
+  const openSignupFromRoster = useCallback((): void => {
+    if (!ready) return;
+    if (wide) scrollToSignupPanel();
+    else openModal();
+  }, [ready, wide, scrollToSignupPanel, openModal]);
+
+  useRegisterGameDetailSignupOpener(openSignupFromRoster);
+
   const signupModal = (
     <SignupForm
       gameId={gameId}
       priceCents={priceCents}
       signedCount={signedCount}
+      waitlistCount={waitlistCount}
       capacity={capacity}
       hostName={hostName}
       hostEmail={hostEmail}
@@ -98,6 +132,7 @@ export function GameDetailSignupSection(props: GameDetailSignupSectionProps): Re
       gameId={gameId}
       priceCents={priceCents}
       signedCount={signedCount}
+      waitlistCount={waitlistCount}
       capacity={capacity}
       hostName={hostName}
       hostEmail={hostEmail}
@@ -157,15 +192,27 @@ export function GameDetailSignupSection(props: GameDetailSignupSectionProps): Re
               </div>
               <div style={{ textAlign: "right" }}>
                 <div className="mono" style={{ fontSize: 10, letterSpacing: ".12em", color: "var(--ink-3)", fontWeight: 700 }}>
-                  SPOTS LEFT
+                  {gameIsFull ? "ON WAITLIST" : "SPOTS LEFT"}
                 </div>
                 <div className="display" style={{ fontSize: 22, lineHeight: 1.1 }}>
-                  {spotsLeft}
+                  {gameIsFull ? waitlistCount : spotsLeft}
                 </div>
               </div>
             </div>
-            <button type="button" className="btn lg accent motion-press" style={{ width: "100%" }} onClick={openModal}>
-              {introLabel} →
+            {gameIsFull ? (
+              <div className="mono" style={{ fontSize: 11, textAlign: "center", color: "var(--ink-2)", letterSpacing: ".06em" }}>
+                {waitlistCount} waitlisted player{waitlistCount === 1 ? "" : "s"} (max {MAX_WAITLIST_PLAYER_SLOTS})
+              </div>
+            ) : null}
+            <button
+              type="button"
+              className="btn lg accent motion-press"
+              style={{ width: "100%" }}
+              onClick={openModal}
+              disabled={waitlistIsFull}
+            >
+              {dockIntroLabel}
+              {!waitlistIsFull ? " →" : ""}
             </button>
           </div>
         </div>

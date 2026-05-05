@@ -6,20 +6,26 @@ import { redirect } from "next/navigation";
 import { HostDashboardClient } from "@/components/features/host-dashboard/HostDashboardClient";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
-import { getHostSessionEmail } from "@/lib/auth";
+import { getHostSessionEmail, isAdminAuthorized } from "@/lib/auth";
 import { includeGameInPublicLiveList } from "@/lib/dropin-session";
-import { getSignupsGroupedByGameId, listLiveGamesForHost } from "@/server/queries/games";
-import { isHostGmailConnected } from "@/server/queries/host-gmail";
+import {
+  getSignupsGroupedByGameId,
+  listLiveGamesForAdmin,
+  listLiveGamesForHost,
+} from "@/server/queries/games";
+import { isHostGmailConnected, mapGmailConnectedForOwnerEmails } from "@/server/queries/host-gmail";
 import { listOrganizations } from "@/server/queries/organizations";
 
 export async function HostDashboardPage(): Promise<ReactElement> {
-  const hostSessionEmail = await getHostSessionEmail();
+  const [hostSessionEmail, adminAuthorized] = await Promise.all([getHostSessionEmail(), isAdminAuthorized()]);
 
-  if (!hostSessionEmail) {
+  if (!hostSessionEmail && !adminAuthorized) {
     redirect("/host/login");
   }
 
-  const games = await listLiveGamesForHost(hostSessionEmail);
+  const games = adminAuthorized
+    ? await listLiveGamesForAdmin()
+    : await listLiveGamesForHost(hostSessionEmail!);
   const nowMs = Date.now();
   const liveGames = games.filter((g) => g.status === "live");
   const cancelledGames = games.filter((g) => g.status === "cancelled");
@@ -28,10 +34,14 @@ export async function HostDashboardPage(): Promise<ReactElement> {
     (game) => game.kind === "dropin" && !includeGameInPublicLiveList(game, nowMs)
   );
   const gameIds = [...activeGames, ...pastDropinGames, ...cancelledGames].map((g) => g.id);
-  const [signupsByGameId, hostGmailConnected, organizations] = await Promise.all([
+  const ownerKeys = [...new Set(games.map((g) => g.owner_email.trim().toLowerCase()))];
+  const [signupsByGameId, hostGmailConnected, organizations, gmailConnectedByOwnerEmail] = await Promise.all([
     getSignupsGroupedByGameId(gameIds, { includeAllPaymentStatuses: true }),
-    isHostGmailConnected(hostSessionEmail),
+    hostSessionEmail ? isHostGmailConnected(hostSessionEmail) : Promise.resolve(false),
     listOrganizations(),
+    adminAuthorized && ownerKeys.length > 0
+      ? mapGmailConnectedForOwnerEmails(ownerKeys)
+      : Promise.resolve(null as Record<string, boolean> | null),
   ]);
 
   return (
@@ -45,6 +55,8 @@ export async function HostDashboardPage(): Promise<ReactElement> {
             cancelledGames={cancelledGames}
             signupsByGameId={signupsByGameId}
             hostGmailConnected={hostGmailConnected}
+            gmailConnectedByOwnerEmail={gmailConnectedByOwnerEmail}
+            hostMagicLinkSignedIn={Boolean(hostSessionEmail)}
             organizations={organizations}
           />
         </Suspense>

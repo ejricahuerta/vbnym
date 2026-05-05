@@ -4,12 +4,15 @@ import { notFound } from "next/navigation";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SeoJsonLd } from "@/components/shared/SeoJsonLd";
+import { GameDetailRosterCard } from "@/components/features/detail/GameDetailRosterCard";
+import { GameDetailSignupOpenerProvider } from "@/components/features/detail/GameDetailSignupOpener";
 import { GameDetailSignupSection } from "@/components/features/detail/GameDetailSignupSection";
 import { KindBadge } from "@/components/shared/UiPrimitives";
+import { buildGameHostMessageHref } from "@/lib/host-whatsapp";
 import { COMING_SOON_LABEL, isGameKindComingSoon } from "@/lib/game-kind-availability";
 import { gameOrganizationDisplayName } from "@/lib/game-organization";
 import { buildBreadcrumbSchema, buildGameEventSchema } from "@/lib/seo-schema";
-import { getHostSessionEmail } from "@/lib/auth";
+import { getHostSessionEmail, isAdminAuthorized } from "@/lib/auth";
 import { getGameWithRoster } from "@/server/queries/games";
 
 function formatDay(iso: string): string {
@@ -33,7 +36,11 @@ function initials(name: string): string {
 }
 
 export async function GameDetailPage({ gameId }: { gameId: string }) {
-  const [data, hostSessionEmail] = await Promise.all([getGameWithRoster(gameId), getHostSessionEmail()]);
+  const [data, hostSessionEmail, adminAuthorized] = await Promise.all([
+    getGameWithRoster(gameId),
+    getHostSessionEmail(),
+    isAdminAuthorized(),
+  ]);
   if (!data) notFound();
 
   const { game, roster } = data;
@@ -45,6 +52,7 @@ export async function GameDetailPage({ gameId }: { gameId: string }) {
   const isHostForThisGame =
     hostSessionEmail != null &&
     game.owner_email.trim().toLowerCase() === hostSessionEmail.trim().toLowerCase();
+  const canManageHostedGame = isHostForThisGame || adminAuthorized;
   const dark = game.kind === "league";
   const comingSoonKind = isGameKindComingSoon(game.kind);
   const venueLine = [game.venue_name, game.venue_area].filter(Boolean).join(", ");
@@ -52,6 +60,12 @@ export async function GameDetailPage({ gameId }: { gameId: string }) {
   const formatParagraph = `${formatLead}${formatLead.endsWith(".") ? "" : "."} Show up 10 minutes early. Captains pick balanced teams. We rotate every 25 minutes.`;
   const rosterPreview = roster.slice(0, 8);
   const moreCount = Math.max(roster.length - 8, 0);
+  const ghostSlots = Math.min(10, Math.max(0, game.capacity - game.signed_count));
+  const hostMessageHref = buildGameHostMessageHref({
+    hostWhatsappE164: game.host_whatsapp_e164,
+    hostEmail: game.host_email,
+    gameTitle: game.title,
+  });
 
   const fg = dark ? "var(--paper)" : "var(--ink)";
   const fgMuted = dark ? "rgba(251,248,241,.85)" : "var(--ink-2)";
@@ -99,7 +113,7 @@ export async function GameDetailPage({ gameId }: { gameId: string }) {
           >
             ← BACK TO SCHEDULE
           </Link>
-          {isHostForThisGame ? (
+          {canManageHostedGame ? (
             <Link
               href="/host"
               className="mono"
@@ -118,7 +132,7 @@ export async function GameDetailPage({ gameId }: { gameId: string }) {
               HOST DASHBOARD →
             </Link>
           ) : null}
-          {!isHostForThisGame && !comingSoonKind ? (
+          {!canManageHostedGame && !comingSoonKind ? (
             <Link
               href={`/host/request?game=${encodeURIComponent(game.id)}`}
               className="mono"
@@ -138,6 +152,7 @@ export async function GameDetailPage({ gameId }: { gameId: string }) {
             </Link>
           ) : null}
         </div>
+        <GameDetailSignupOpenerProvider>
         <div
           style={{
             maxWidth: 1280,
@@ -199,9 +214,15 @@ export async function GameDetailPage({ gameId }: { gameId: string }) {
                   ★ 4.9 · 62 GAMES RUN
                 </div>
               </div>
-              <button type="button" className="btn sm ghost">
+              <a
+                href={hostMessageHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn sm ghost"
+                style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}
+              >
                 Message
-              </button>
+              </a>
             </div>
             <div className="label" style={labelColor ? { color: labelColor } : undefined}>
               Roster · {roster.length}
@@ -217,60 +238,16 @@ export async function GameDetailPage({ gameId }: { gameId: string }) {
                 borderColor: dark ? "rgba(251,248,241,.35)" : undefined,
               }}
             >
-              {roster.length === 0 ? (
-                <div style={{ padding: 14, fontSize: 13, color: fgMuted }}>No one yet.</div>
-              ) : (
-                <>
-                  {rosterPreview.map((row, index) => (
-                    <div
-                      key={row.id}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 10,
-                        padding: "12px 14px",
-                        borderBottom: index === rosterPreview.length - 1 && moreCount === 0 ? "none" : "1px dashed var(--ink-3)",
-                        color: fg,
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: 28,
-                          height: 28,
-                          borderRadius: "50%",
-                          background: dark ? "rgba(251,248,241,.12)" : "var(--bg)",
-                          border: "1.5px solid var(--ink)",
-                          display: "grid",
-                          placeItems: "center",
-                          fontWeight: 900,
-                          fontSize: 11,
-                          fontFamily: "var(--display)",
-                          flexShrink: 0,
-                        }}
-                      >
-                        {initials(row.player_name)}
-                      </div>
-                      <div style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{row.player_name}</div>
-                    </div>
-                  ))}
-                  {moreCount > 0 ? (
-                    <div
-                      className="mono"
-                      style={{
-                        padding: "12px 14px",
-                        textAlign: "center",
-                        fontSize: 11,
-                        color: fgMuted,
-                        background: dark ? "rgba(251,248,241,.06)" : "var(--bg)",
-                        letterSpacing: ".12em",
-                        fontWeight: 700,
-                      }}
-                    >
-                      + {moreCount} MORE
-                    </div>
-                  ) : null}
-                </>
-              )}
+              <GameDetailRosterCard
+                rosterLength={roster.length}
+                rosterPreview={rosterPreview}
+                moreCount={moreCount}
+                ghostSlots={ghostSlots}
+                showGhosts={!comingSoonKind}
+                dark={dark}
+                fg={fg}
+                fgMuted={fgMuted}
+              />
             </div>
             <div className="label" style={labelColor ? { color: labelColor } : undefined}>
               Format
@@ -278,18 +255,9 @@ export async function GameDetailPage({ gameId }: { gameId: string }) {
             <p style={{ fontSize: 16, lineHeight: 1.6, margin: "0 0 24px", maxWidth: 680, color: fgMuted }}>
               {formatParagraph}
             </p>
-            <div className="label" style={labelColor ? { color: labelColor } : undefined}>
-              What to bring
-            </div>
-            <ul style={{ paddingLeft: 18, fontSize: 14, color: fgMuted, lineHeight: 1.7, margin: "0 0 24px" }}>
-              <li>Indoor court shoes (non-marking)</li>
-              <li>Water fountain on site</li>
-              <li>Knee pads if you&apos;ve got them</li>
-              <li>A light + dark shirt for team mixing</li>
-            </ul>
             </div>
           </div>
-          <div className="detail-hero-signup">
+          <div className="detail-hero-signup" id="game-detail-signup">
             {comingSoonKind ? (
               <div className="card" style={{ padding: 16, border: "2px solid var(--ink)", background: "var(--paper)" }}>
                 <div className="chip warn" style={{ marginBottom: 10 }}>
@@ -304,6 +272,7 @@ export async function GameDetailPage({ gameId }: { gameId: string }) {
                 gameId={game.id}
                 priceCents={game.price_cents}
                 signedCount={game.signed_count}
+                waitlistCount={game.waitlist_count}
                 capacity={game.capacity}
                 hostName={game.host_name}
                 hostEmail={game.host_email}
@@ -314,6 +283,7 @@ export async function GameDetailPage({ gameId }: { gameId: string }) {
             )}
           </div>
         </div>
+        </GameDetailSignupOpenerProvider>
       </section>
       <SiteFooter />
     </div>

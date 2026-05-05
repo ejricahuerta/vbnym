@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { parseHostWhatsappE164FromForm } from "@/lib/host-whatsapp";
 import { isGameKindComingSoon } from "@/lib/game-kind-availability";
 import type { ActionResult } from "@/types/action-result";
 
@@ -18,11 +19,15 @@ export const hostPublishSchema = z.object({
   format: z.string().trim().min(2),
   hostName: z.string().trim().min(2),
   hostEmail: z.email(),
+  /** Raw form value; normalized to `hostWhatsappE164` in the parser. */
+  hostWhatsapp: z.string().optional(),
   organizationId: z.string().uuid(),
   joinAsPlayer: z.boolean(),
 });
 
-export type HostPublishInput = z.infer<typeof hostPublishSchema>;
+export type HostPublishInput = Omit<z.infer<typeof hostPublishSchema>, "hostWhatsapp"> & {
+  hostWhatsappE164: string | null;
+};
 
 export const hostInteracEmailSchema = z.object({
   gameId: z.string().uuid(),
@@ -48,10 +53,13 @@ export const hostLiveGameUpdateSchema = z.object({
   priceCents: z.coerce.number().int().min(0),
   format: z.string().trim().min(2),
   hostName: z.string().trim().min(2),
+  hostWhatsapp: z.string(),
   organizationId: z.string().uuid(),
 });
 
-export type HostLiveGameUpdateInput = z.infer<typeof hostLiveGameUpdateSchema>;
+export type HostLiveGameUpdateInput = Omit<z.infer<typeof hostLiveGameUpdateSchema>, "hostWhatsapp"> & {
+  hostWhatsappE164: string | null;
+};
 
 export const hostCancelLiveGameSchema = z.object({
   gameId: z.string().uuid(),
@@ -78,13 +86,17 @@ export function parseHostPublishFormData(formData: FormData): ActionResult<HostP
     format: f(formData, "format"),
     hostName: f(formData, "hostName"),
     hostEmail: f(formData, "hostEmail"),
+    hostWhatsapp: f(formData, "hostWhatsapp"),
     organizationId: f(formData, "organizationId"),
     joinAsPlayer: f(formData, "joinAsPlayer") === "on",
   });
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid host publish data." };
   }
-  return { ok: true, data: parsed.data };
+  const wa = parseHostWhatsappE164FromForm(parsed.data.hostWhatsapp ?? "");
+  if (!wa.ok) return { ok: false, error: wa.error };
+  const { hostWhatsapp: _drop, ...rest } = parsed.data;
+  return { ok: true, data: { ...rest, hostWhatsappE164: wa.value } };
 }
 
 export function parseHostInteracEmailFormData(formData: FormData): ActionResult<HostInteracEmailInput> {
@@ -112,12 +124,16 @@ export function parseHostLiveGameUpdateFormData(formData: FormData): ActionResul
     priceCents: f(formData, "priceCents"),
     format: f(formData, "format"),
     hostName: f(formData, "hostName"),
+    hostWhatsapp: f(formData, "hostWhatsapp"),
     organizationId: f(formData, "organizationId"),
   });
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid game details." };
   }
-  return { ok: true, data: parsed.data };
+  const wa = parseHostWhatsappE164FromForm(parsed.data.hostWhatsapp);
+  if (!wa.ok) return { ok: false, error: wa.error };
+  const { hostWhatsapp: _drop, ...rest } = parsed.data;
+  return { ok: true, data: { ...rest, hostWhatsappE164: wa.value } };
 }
 
 export function parseHostCancelLiveGameFormData(formData: FormData): ActionResult<HostCancelLiveGameInput> {

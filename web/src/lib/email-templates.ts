@@ -54,6 +54,36 @@ type HostSignupNotificationTemplateInput = {
   manualOnly: boolean;
 };
 
+type PlayerWaitlistJoinedTemplateInput = {
+  gameTitle: string;
+  startsAtDisplay: string;
+  gameOrganizerName: string;
+  playerOrganizationName: string;
+  hostName: string;
+  hostEmail: string;
+  playerName: string;
+  playerCount: number;
+  addedByName: string;
+  amountCents: number;
+  paymentCode: string;
+  waitlistInviteMinutes: number;
+};
+
+type HostWaitlistSignupNotificationTemplateInput = {
+  gameTitle: string;
+  startsAtDisplay: string;
+  gameOrganizerName: string;
+  playerOrganizationName: string;
+  playerName: string;
+  playerEmail: string;
+  paymentCode: string;
+  amountCents: number;
+  playerCount: number;
+  addedByName: string;
+  refundOwnerName: string;
+  manualOnly: boolean;
+};
+
 type PendingReminderTemplateInput = {
   gameTitle: string;
   startsAtDisplay: string;
@@ -298,6 +328,82 @@ export function buildHostSignupNotificationEmailTemplate(input: HostSignupNotifi
       footerText: "Use host dashboard filters to keep pending payments moving.",
     }),
     text: `New player signup\n\n${input.playerName} (${input.playerEmail}) joined ${input.gameTitle}.\nStart: ${input.startsAtDisplay}\nPresenting organizer: ${input.gameOrganizerName}\nRegistering under: ${input.playerOrganizationName}\nPlayers: ${input.playerCount}\nAdded by: ${input.addedByName}\nRefund owner: ${input.refundOwnerName}\nAmount: ${amount}\nReference: ${input.paymentCode}\n`,
+  };
+}
+
+export function buildPlayerWaitlistJoinedEmailTemplate(input: PlayerWaitlistJoinedTemplateInput): EmailTemplate {
+  const amount = formatMoney(input.amountCents);
+  return {
+    subject: `Waitlist confirmed: ${input.gameTitle}`,
+    html: renderLayout({
+      title: "You are on the waitlist",
+      subtitle: `Hi ${input.playerName}, we saved your request.`,
+      contentHtml: `
+        <p style="margin:0 0 12px;font-size:13px;line-height:1.55;color:#42424a;">
+          The game is full right now. You are on the waitlist in order of signup. Do <strong>not</strong> send Interac yet
+          → wait until a spot opens and you get payment instructions (same style as a regular signup email).
+        </p>
+        <p style="margin:0 0 12px;font-size:13px;line-height:1.55;color:#42424a;">
+          When the host invites you from the waitlist, you will have about <strong>${input.waitlistInviteMinutes} minutes</strong> to
+          complete payment and claim the spot.
+        </p>
+        <p style="margin:0 0 12px;font-size:13px;line-height:1.55;color:#42424a;">
+          Save your reference code for that payment step:
+        </p>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:2px solid #111114;border-radius:8px;background:#efeae0;">
+          <tr><td style="padding:12px 14px;font-size:13px;line-height:1.6;color:#111114;">
+            <strong>Game:</strong> ${escapeHtml(input.gameTitle)}<br />
+            <strong>Start:</strong> ${escapeHtml(input.startsAtDisplay)}<br />
+            <strong>Presenting organizer:</strong> ${escapeHtml(input.gameOrganizerName)}<br />
+            <strong>Registering under:</strong> ${escapeHtml(input.playerOrganizationName)}<br />
+            <strong>Added by:</strong> ${escapeHtml(input.addedByName)}<br />
+            <strong>Players:</strong> ${input.playerCount}<br />
+            <strong>Amount when invited:</strong> ${escapeHtml(amount)}<br />
+            <strong>Send to (when invited):</strong> ${escapeHtml(input.hostEmail)}<br />
+            <strong>Your reference (use when paying):</strong> ${escapeHtml(input.paymentCode)}<br />
+            <strong>Host:</strong> ${escapeHtml(input.hostName)}
+          </td></tr>
+        </table>
+      `,
+      footerText: "This inbox is not monitored. For support, contact your host directly.",
+    }),
+    text: `Waitlist confirmed\n\nHi ${input.playerName}, you are on the waitlist for ${input.gameTitle}.\n\nDo not send Interac until you receive payment instructions. When invited, you have about ${input.waitlistInviteMinutes} minutes to pay and claim the spot.\n\nGame: ${input.gameTitle}\nStart: ${input.startsAtDisplay}\nPresenting organizer: ${input.gameOrganizerName}\nRegistering under: ${input.playerOrganizationName}\nAdded by: ${input.addedByName}\nPlayers: ${input.playerCount}\nAmount when invited: ${amount}\nSend to when invited: ${input.hostEmail}\nYour reference when paying: ${input.paymentCode}\nHost: ${input.hostName}\n\nThis inbox is not monitored. Contact your host directly for support.\n`,
+  };
+}
+
+export function buildHostWaitlistSignupNotificationEmailTemplate(
+  input: HostWaitlistSignupNotificationTemplateInput
+): EmailTemplate {
+  const amount = formatMoney(input.amountCents);
+  return {
+    subject: `Waitlist signup: ${input.playerName}`,
+    html: renderLayout({
+      title: "Waitlist signup",
+      subtitle: `${input.playerName} joined the waitlist for ${input.gameTitle}.`,
+      contentHtml: `
+        <p style="margin:0 0 12px;font-size:13px;line-height:1.55;color:#42424a;">
+          No Interac payment is expected until you move them to the active roster (or they become pending payment). They
+          have been notified with waitlist copy and their reserved reference code for when a spot opens.
+        </p>
+        <p style="margin:0 0 12px;font-size:13px;line-height:1.55;color:#42424a;">
+          ${input.manualOnly ? "This game is manual-only for payment confirmation." : "This game is connected to Gmail sync for auto-matching."}
+        </p>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:2px solid #111114;border-radius:8px;background:#efeae0;">
+          <tr><td style="padding:12px 14px;font-size:13px;line-height:1.6;color:#111114;">
+            <strong>Player:</strong> ${escapeHtml(input.playerName)} (${escapeHtml(input.playerEmail)})<br />
+            <strong>Game:</strong> ${escapeHtml(input.gameTitle)}<br />
+            <strong>Start:</strong> ${escapeHtml(input.startsAtDisplay)}<br />
+            <strong>Players:</strong> ${input.playerCount}<br />
+            <strong>Added by:</strong> ${escapeHtml(input.addedByName)}<br />
+            <strong>Refund owner:</strong> ${escapeHtml(input.refundOwnerName)}<br />
+            <strong>Expected amount when invited:</strong> ${escapeHtml(amount)}<br />
+            <strong>Reserved reference:</strong> ${escapeHtml(input.paymentCode)}
+          </td></tr>
+        </table>
+      `,
+      footerText: "Use host dashboard filters to manage waitlist and roster moves.",
+    }),
+    text: `Waitlist signup\n\n${input.playerName} (${input.playerEmail}) is on the waitlist for ${input.gameTitle}.\nStart: ${input.startsAtDisplay}\nPresenting organizer: ${input.gameOrganizerName}\nRegistering under: ${input.playerOrganizationName}\nPlayers: ${input.playerCount}\nAdded by: ${input.addedByName}\nRefund owner: ${input.refundOwnerName}\nExpected amount when invited: ${amount}\nReserved reference: ${input.paymentCode}\n`,
   };
 }
 

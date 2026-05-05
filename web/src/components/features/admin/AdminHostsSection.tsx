@@ -15,7 +15,8 @@ export function AdminHostsSection({
           Approved hosts
         </h2>
         <p style={{ margin: "0 0 14px", fontSize: 14, color: "var(--ink-2)", lineHeight: 1.55, maxWidth: 640 }}>
-          Only these emails can use host sign-in. Add someone before they can request a magic link.
+          Only these emails can use host sign-in. Add someone before they can request a magic link. For each approved host
+          you can edit display name, sign-in email, and optional phone (E.164 digits); save applies one row at a time.
         </p>
         <AdminHostsPanelClient initialHosts={hosts} initialRequests={requests} />
       </div>

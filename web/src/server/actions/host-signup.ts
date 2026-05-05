@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { getHostSessionEmail } from "@/lib/auth";
+import { resolveHostedGameManagement } from "@/lib/auth";
 import {
   buildPlayerPaymentConfirmedEmailTemplate,
   buildPlayerSignupPaymentEmailTemplate,
@@ -24,13 +24,12 @@ export async function setSignupPaymentStatusForHost(formData: FormData): Promise
   const parsed = parseHostSetSignupPaymentStatusFormData(formData);
   if (!parsed.ok) return parsed;
 
-  const sessionEmail = await getHostSessionEmail();
-  if (!sessionEmail) {
-    return { ok: false, error: "Sign in as host to update the roster." };
+  const auth = await resolveHostedGameManagement();
+  if (!auth.ok) {
+    return { ok: false, error: auth.error };
   }
 
   const supabase = createServerSupabase();
-  const normalizedSession = sessionEmail.trim().toLowerCase();
 
   const { data: game, error: gameErr } = await supabase
     .from("games")
@@ -56,7 +55,10 @@ export async function setSignupPaymentStatusForHost(formData: FormData): Promise
     return { ok: false, error: "Game not found." };
   }
 
-  if (game.owner_email.trim().toLowerCase() !== normalizedSession) {
+  const isGameOwner =
+    auth.hostSessionEmail != null &&
+    game.owner_email.trim().toLowerCase() === auth.hostSessionEmail.trim().toLowerCase();
+  if (!auth.isAdmin && !isGameOwner) {
     return { ok: false, error: "You can only update games you host." };
   }
 
@@ -114,14 +116,19 @@ export async function setSignupPaymentStatusForHost(formData: FormData): Promise
     updatePayload.status = restoredRosterStatus;
   }
 
-  const { error: upErr } = await supabase
+  const { data: updatedSignup, error: upErr } = await supabase
     .from("signups")
     .update(updatePayload)
     .eq("id", parsed.data.signupId)
-    .eq("game_id", parsed.data.gameId);
+    .eq("game_id", parsed.data.gameId)
+    .select("id")
+    .maybeSingle<{ id: string }>();
 
   if (upErr) {
     return { ok: false, error: upErr.message ?? "Could not update payment status." };
+  }
+  if (!updatedSignup?.id) {
+    return { ok: false, error: "Sign-up not found or could not be updated." };
   }
 
   if (shouldAutoCancelRoster) {
@@ -249,13 +256,12 @@ export async function setSignupRosterStatusForHost(formData: FormData): Promise<
   const parsed = parseHostSetSignupRosterStatusFormData(formData);
   if (!parsed.ok) return parsed;
 
-  const sessionEmail = await getHostSessionEmail();
-  if (!sessionEmail) {
-    return { ok: false, error: "Sign in as host to update the roster." };
+  const auth = await resolveHostedGameManagement();
+  if (!auth.ok) {
+    return { ok: false, error: auth.error };
   }
 
   const supabase = createServerSupabase();
-  const normalizedSession = sessionEmail.trim().toLowerCase();
   const nextStatus = parsed.data.status;
 
   const { data: game, error: gameErr } = await supabase
@@ -274,7 +280,10 @@ export async function setSignupRosterStatusForHost(formData: FormData): Promise<
     return { ok: false, error: "Game not found." };
   }
 
-  if (game.owner_email.trim().toLowerCase() !== normalizedSession) {
+  const isGameOwner =
+    auth.hostSessionEmail != null &&
+    game.owner_email.trim().toLowerCase() === auth.hostSessionEmail.trim().toLowerCase();
+  if (!auth.isAdmin && !isGameOwner) {
     return { ok: false, error: "You can only update games you host." };
   }
 
@@ -335,14 +344,19 @@ export async function setSignupRosterStatusForHost(formData: FormData): Promise<
     }
   }
 
-  const { error: signupUpdateErr } = await supabase
+  const { data: rosterUpdatedSignup, error: signupUpdateErr } = await supabase
     .from("signups")
     .update({ status: nextStatus })
     .eq("id", parsed.data.signupId)
-    .eq("game_id", parsed.data.gameId);
+    .eq("game_id", parsed.data.gameId)
+    .select("id")
+    .maybeSingle<{ id: string }>();
 
   if (signupUpdateErr) {
     return { ok: false, error: signupUpdateErr.message ?? "Could not update roster status." };
+  }
+  if (!rosterUpdatedSignup?.id) {
+    return { ok: false, error: "Sign-up not found or could not be updated." };
   }
 
   const { error: gameUpdateErr } = await supabase

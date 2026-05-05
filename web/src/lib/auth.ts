@@ -20,6 +20,19 @@ export async function isAdminAuthorized(): Promise<boolean> {
   return isAdminEmail(v.email);
 }
 
+export type HostedGameManagementAuth =
+  | { ok: true; hostSessionEmail: string | null; isAdmin: boolean }
+  | { ok: false; error: string };
+
+/** Host magic link and/or admin session may mutate live hosted games (details, roster, payouts). */
+export async function resolveHostedGameManagement(): Promise<HostedGameManagementAuth> {
+  const [hostSessionEmail, isAdmin] = await Promise.all([getHostSessionEmail(), isAdminAuthorized()]);
+  if (!hostSessionEmail && !isAdmin) {
+    return { ok: false, error: "Sign in as a host or admin to continue." };
+  }
+  return { ok: true, hostSessionEmail, isAdmin };
+}
+
 export async function getAdminSessionEmail(): Promise<string | null> {
   const store = await cookies();
   const raw = store.get(ADMIN_SESSION_COOKIE)?.value;
